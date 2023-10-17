@@ -231,9 +231,6 @@ class PPO_Penalty(OnPolicyAlgorithm):
                 # penalized surrogate loss
                 policy_loss = (advantages * ratio - self.beta * approx_kl_div).mean()
 
-                # TODO: Refactor this later
-                loss = policy_loss
-
                 # Logging
                 pg_losses.append(policy_loss.item())
 
@@ -252,6 +249,8 @@ class PPO_Penalty(OnPolicyAlgorithm):
                     entropy_loss = -th.mean(entropy)
 
                 entropy_losses.append(entropy_loss.item())
+
+                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
                 if self.target_kl is not None and approx_kl_div > 1.5 * self.target_kl:
                     continue_training = False
