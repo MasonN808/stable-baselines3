@@ -229,7 +229,7 @@ class PPO_Penalty(OnPolicyAlgorithm):
                     approx_kl_divs.append(approx_kl_div)
 
                 # penalized surrogate loss
-                policy_loss = advantages * ratio - self.beta * approx_kl_div
+                policy_loss = (advantages * ratio - self.beta * approx_kl_div).mean()
 
                 # TODO: Refactor this later
                 loss = policy_loss
