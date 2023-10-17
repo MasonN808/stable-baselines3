@@ -93,6 +93,7 @@ class PPO_Penalty(OnPolicyAlgorithm):
         use_sde: bool = False,
         sde_sample_freq: int = -1,
         target_kl: Optional[float] = None,
+        beta: float = 1,
         stats_window_size: int = 100,
         tensorboard_log: Optional[str] = None,
         policy_kwargs: Optional[Dict[str, Any]] = None,
@@ -159,6 +160,7 @@ class PPO_Penalty(OnPolicyAlgorithm):
         self.clip_range_vf = clip_range_vf
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
+        self.beta = beta
 
         if _init_setup_model:
             self._setup_model()
