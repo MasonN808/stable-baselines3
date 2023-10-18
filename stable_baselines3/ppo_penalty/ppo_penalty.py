@@ -229,12 +229,12 @@ class PPO_Penalty(OnPolicyAlgorithm):
                     approx_kl_divs.append(approx_kl_div)
 
                 # penalized surrogate loss
-                policy_loss = (advantages * ratio - self.beta * approx_kl_div).mean()
+                policy_loss = -th.mean(advantages * ratio - self.beta * approx_kl_div)
 
                 # Logging
                 pg_losses.append(policy_loss.item())
 
-                # No clipping   
+                # No clipping
                 values_pred = values
 
                 # Value loss using the TD(gae_lambda) target
