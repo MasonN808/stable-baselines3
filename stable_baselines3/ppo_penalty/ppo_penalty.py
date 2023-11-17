@@ -94,6 +94,7 @@ class PPO_Penalty(OnPolicyAlgorithm):
         sde_sample_freq: int = -1,
         target_kl: Optional[float] = None,
         beta: float = 1,
+        dynamic_beta: bool = False,
         stats_window_size: int = 100,
         tensorboard_log: Optional[str] = None,
         policy_kwargs: Optional[Dict[str, Any]] = None,
@@ -161,6 +162,7 @@ class PPO_Penalty(OnPolicyAlgorithm):
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
         self.beta = beta
+        self.dynamic_beta = dynamic_beta
 
         if _init_setup_model:
             self._setup_model()
@@ -231,6 +233,13 @@ class PPO_Penalty(OnPolicyAlgorithm):
                 # penalized surrogate loss
                 policy_loss = -th.mean(advantages * ratio - self.beta * approx_kl_div)
 
+                # Update beta for the next policy update
+                if self.dynamic_beta:
+                    if approx_kl_div < self.target_kl / 1.5:
+                        self.beta = self.beta / 2
+                    if approx_kl_div > self.target_kl * 1.5:
+                        self.beta = self.beta * 2
+
                 # Logging
                 pg_losses.append(policy_loss.item())
 
@@ -274,9 +283,12 @@ class PPO_Penalty(OnPolicyAlgorithm):
         # Logs
         self.logger.record("train/entropy_loss", np.mean(entropy_losses))
         self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
+        self.logger.record("train/ln(policy_gradient_loss)", np.log(np.mean(pg_losses)))
         self.logger.record("train/value_loss", np.mean(value_losses))
         self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
+        self.logger.record("train/approx_ln(kl)", np.log(np.mean(approx_kl_divs)))
         self.logger.record("train/loss", loss.item())
+        self.logger.record("train/ln(loss)", np.log(loss.item()))
         self.logger.record("train/explained_variance", explained_var)
         if hasattr(self.policy, "log_std"):
             self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
