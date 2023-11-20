@@ -261,11 +261,11 @@ class PPO_Penalty(OnPolicyAlgorithm):
 
                 loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
-                # if self.target_kl is not None and approx_kl_div > 1.5 * self.target_kl:
-                #     continue_training = False
-                #     if self.verbose >= 1:
-                #         print(f"Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}")
-                #     break
+                if self.target_kl is not None and approx_kl_div > 1.5 * self.target_kl:
+                    continue_training = False
+                    if self.verbose >= 1:
+                        print(f"Early stopping at step {epoch} due to reaching max kl: {approx_kl_div:.2f}")
+                    break
 
                 # Optimization step
                 self.policy.optimizer.zero_grad()
