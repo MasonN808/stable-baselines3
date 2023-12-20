@@ -27,6 +27,7 @@ Schedule = Callable[[float], float]
 class RolloutBufferSamples(NamedTuple):
     observations: th.Tensor
     actions: th.Tensor
+    costs: th.Tensor
     old_values: th.Tensor
     old_log_prob: th.Tensor
     advantages: th.Tensor

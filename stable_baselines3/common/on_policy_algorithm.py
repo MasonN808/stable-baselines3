@@ -198,7 +198,11 @@ class OnPolicyAlgorithm(BaseAlgorithm):
 
             # Handle timeout by bootstraping with value function
             # see GitHub issue #633
+            costs = []
             for idx, done in enumerate(dones):
+                # Extract costs fron info dict
+                cost = np.array(infos[idx].get("cost"))
+                costs.append(cost)
                 if (
                     done
                     and infos[idx].get("terminal_observation") is not None
@@ -208,11 +212,13 @@ class OnPolicyAlgorithm(BaseAlgorithm):
                     with th.no_grad():
                         terminal_value = self.policy.predict_values(terminal_obs)[0]  # type: ignore[arg-type]
                     rewards[idx] += self.gamma * terminal_value
+            costs = np.concatenate(costs)
 
             rollout_buffer.add(
                 self._last_obs,  # type: ignore[arg-type]
                 actions,
                 rewards,
+                costs,
                 self._last_episode_starts,  # type: ignore[arg-type]
                 values,
                 log_probs,
