@@ -16,7 +16,7 @@ SelfPPOL = TypeVar("SelfPPOL", bound="PPOL")
 
 class PPOL(OnPolicyAlgorithm):
     """
-    Proximal Policy Optimization algorithm (PPO) (clip version)
+    Proximal Policy Optimization with Lagrangian algorithm (PPOL) (clip version)
 
     Paper: https://arxiv.org/abs/1707.06347
     Code: This implementation borrows code from OpenAI Spinning Up (https://github.com/openai/spinningup/)
@@ -198,6 +198,8 @@ class PPOL(OnPolicyAlgorithm):
             approx_kl_divs = []
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
+                print(rollout_data.actions)
+                exit()
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
                     # Convert discrete action from float to long
@@ -252,6 +254,21 @@ class PPOL(OnPolicyAlgorithm):
 
                 loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
+                # # get a list of lagrangian multiplier
+                # lags = [optim.get_lag() for optim in self.lag_optims]
+                # # Alg. 1 of http://proceedings.mlr.press/v119/stooke20a/stooke20a.pdf
+                # rescaling = 1. / (np.sum(lags) + 1) if self.rescaling else 1
+                # assert len(values) == len(lags), "lags and values length must be equal"
+                # stats = {"loss/rescaling": rescaling}
+                # loss_safety_total = 0.
+                # for i, (value, lagrangian) in enumerate(zip(values, lags)):
+                #     loss = torch.mean(value * lagrangian)
+                #     loss_safety_total += loss
+                #     suffix = "" if i == 0 else "_" + str(i)
+                #     stats["loss/lagrangian" + suffix] = lagrangian
+                #     stats["loss/actor_safety" + suffix] = loss.item()
+                # return loss_safety_total, stats
+            
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
