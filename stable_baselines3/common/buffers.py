@@ -365,6 +365,7 @@ class RolloutBuffer(BaseBuffer):
     observations: np.ndarray
     actions: np.ndarray
     rewards: np.ndarray
+    costs: np.ndarray
     advantages: np.ndarray
     returns: np.ndarray
     episode_starts: np.ndarray
@@ -391,6 +392,7 @@ class RolloutBuffer(BaseBuffer):
         self.observations = np.zeros((self.buffer_size, self.n_envs, *self.obs_shape), dtype=np.float32)
         self.actions = np.zeros((self.buffer_size, self.n_envs, self.action_dim), dtype=np.float32)
         self.rewards = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        self.costs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.returns = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.episode_starts = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.values = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
@@ -441,6 +443,7 @@ class RolloutBuffer(BaseBuffer):
         obs: np.ndarray,
         action: np.ndarray,
         reward: np.ndarray,
+        cost: np.ndarray,
         episode_start: np.ndarray,
         value: th.Tensor,
         log_prob: th.Tensor,
@@ -470,6 +473,7 @@ class RolloutBuffer(BaseBuffer):
         self.observations[self.pos] = np.array(obs)
         self.actions[self.pos] = np.array(action)
         self.rewards[self.pos] = np.array(reward)
+        self.costs[self.pos] = np.array(cost)
         self.episode_starts[self.pos] = np.array(episode_start)
         self.values[self.pos] = value.clone().cpu().numpy().flatten()
         self.log_probs[self.pos] = log_prob.clone().cpu().numpy()
@@ -485,6 +489,7 @@ class RolloutBuffer(BaseBuffer):
             _tensor_names = [
                 "observations",
                 "actions",
+                "costs",
                 "values",
                 "log_probs",
                 "advantages",
@@ -512,6 +517,7 @@ class RolloutBuffer(BaseBuffer):
         data = (
             self.observations[batch_inds],
             self.actions[batch_inds],
+            self.costs[batch_inds],
             self.values[batch_inds].flatten(),
             self.log_probs[batch_inds].flatten(),
             self.advantages[batch_inds].flatten(),
