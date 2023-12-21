@@ -375,15 +375,22 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             policy=policy,
             env=env,
             learning_rate=learning_rate,
-            policy_kwargs=policy_kwargs,
-            verbose=verbose,
-            device=device,
+            n_steps=n_steps,
+            gamma=gamma,
+            gae_lambda=gae_lambda,
+            ent_coef=ent_coef,
+            vf_coef=vf_coef,
+            max_grad_norm=max_grad_norm,
             use_sde=use_sde,
             sde_sample_freq=sde_sample_freq,
-            support_multi_env=True,
-            seed=seed,
             stats_window_size=stats_window_size,
             tensorboard_log=tensorboard_log,
+            monitor_wrapper=monitor_wrapper,
+            policy_kwargs=policy_kwargs,
+            verbose=verbose,
+            seed=seed,
+            device=device,
+            _init_setup_model=_init_setup_model,
             supported_action_spaces=supported_action_spaces,
         )
         self.n_costs = n_costs
@@ -413,7 +420,7 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             n_envs=self.n_envs,
         )
         self.policy = self.policy_class(  # type: ignore[assignment]
-            self.observation_space, self.action_space, self.lr_schedule, n_costs=self.n_costs, use_sde=self.use_sde, **self.policy_kwargs
+            self.observation_space, self.action_space, self.lr_schedule, self.n_costs, use_sde=self.use_sde, **self.policy_kwargs
         )
         self.policy = self.policy.to(self.device)
 
@@ -503,11 +510,12 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                 ):
                     terminal_obs = self.policy.obs_to_tensor(infos[idx]["terminal_observation"])[0]
                     with th.no_grad():
-                        terminal_value = self.policy.predict_values(terminal_obs)[0]  # type: ignore[arg-type]
+                        terminal_value = self.policy.predict_values(terminal_obs).flatten()[0]  # type: ignore[arg-type]
                     rewards[idx] += self.gamma * terminal_value
             costs = np.concatenate(costs)
 
             # Parse values from critic network
+            values = values.flatten()
             values_rewards = values[0]
             values_costs = values[1:]
 
