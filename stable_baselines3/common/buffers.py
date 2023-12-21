@@ -444,7 +444,7 @@ class RolloutBuffer(BaseBuffer):
         # in David Silver Lecture 4: https://www.youtube.com/watch?v=PnHCvfgC_ZA
         self.returns = self.advantages + self.values
 
-    def compute_returns_and_advantages_costs(self, last_costs: th.Tensor, dones: np.ndarray) -> None:
+    def compute_returns_and_advantages_costs(self, last_values_costs: th.Tensor, dones: np.ndarray) -> None:
         """
         Post-processing step: compute the lambda-return (TD(lambda) estimate)
         and GAE(lambda) advantage.
@@ -464,17 +464,17 @@ class RolloutBuffer(BaseBuffer):
         :param dones: if the last step was a terminal step (one bool for each env).
         """
         # Convert to numpy
-        last_costs = last_costs.clone().cpu().numpy().flatten()
+        last_values_costs = last_values_costs.clone().cpu().numpy().flatten()
 
         last_gae_lam = 0
         for step in reversed(range(self.buffer_size)):
             if step == self.buffer_size - 1:
                 next_non_terminal = 1.0 - dones
-                next_values = last_costs
+                next_values_costs = last_values_costs
             else:
                 next_non_terminal = 1.0 - self.episode_starts[step + 1]
-                next_values = self.values_costs[step + 1]
-            delta = self.costs[step] + self.gamma * next_values * next_non_terminal - self.values_costs[step]
+                next_values_costs = self.values_costs[step + 1]
+            delta = self.costs[step] + self.gamma * next_values_costs * next_non_terminal - self.values_costs[step]
             last_gae_lam = delta + self.gamma * self.gae_lambda * next_non_terminal * last_gae_lam
             self.advantages_costs[step] = last_gae_lam
         # TD(lambda) estimator, see Github PR #375 or "Telescoping in TD(lambda)"
