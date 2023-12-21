@@ -7,7 +7,7 @@ from gymnasium import spaces
 from torch.nn import functional as F
 
 from stable_baselines3.common.on_policy_algorithm import GeneralizedOnPolicyAlgorithm
-from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticPolicy, ActorManyCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
+from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorManyCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 
@@ -78,6 +78,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         self,
         policy: Union[str, Type[ActorManyCriticPolicy]],
         env: Union[GymEnv, str],
+        n_costs: int,
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
         batch_size: int = 64,
@@ -104,6 +105,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         super().__init__(
             policy,
             env,
+            n_costs=n_costs,
             learning_rate=learning_rate,
             n_steps=n_steps,
             gamma=gamma,
@@ -153,6 +155,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     f"We recommend using a `batch_size` that is a factor of `n_steps * n_envs`.\n"
                     f"Info: (n_steps={self.n_steps} and n_envs={self.env.num_envs})"
                 )
+        self.n_costs = n_costs
         self.batch_size = batch_size
         self.n_epochs = n_epochs
         self.clip_range = clip_range
@@ -200,8 +203,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             # J_c = []
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
-                print(rollout_data.returns)
-                exit()
+                print(rollout_data.returns_costs)
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
                     # Convert discrete action from float to long
