@@ -444,7 +444,7 @@ class RolloutBuffer(BaseBuffer):
         # in David Silver Lecture 4: https://www.youtube.com/watch?v=PnHCvfgC_ZA
         self.returns = self.advantages + self.values
 
-    def compute_returns_and_advantages_costs(self, last_values_costs: th.Tensor, dones: np.ndarray) -> None:
+    def compute_returns_and_advantage_costs(self, last_values_costs: th.Tensor, dones: np.ndarray) -> None:
         """
         Post-processing step: compute the lambda-return (TD(lambda) estimate)
         and GAE(lambda) advantage.
