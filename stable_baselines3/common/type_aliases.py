@@ -29,9 +29,12 @@ class RolloutBufferSamples(NamedTuple):
     actions: th.Tensor
     costs: th.Tensor
     old_values: th.Tensor
+    old_values_costs: th.Tensor
     old_log_prob: th.Tensor
     advantages: th.Tensor
+    advantages_costs: th.Tensor
     returns: th.Tensor
+    returns_costs: th.Tensor
 
 
 class DictRolloutBufferSamples(NamedTuple):
