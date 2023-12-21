@@ -978,6 +978,7 @@ class ActorManyCriticPolicy(ActorCriticPolicy):
     :param observation_space: Observation space
     :param action_space: Action space
     :param lr_schedule: Learning rate schedule (could be constant)
+    :param n_costs: Number of cost functions per state in CMDP
     :param net_arch: The specification of the policy and value networks.
     :param activation_fn: Activation function
     :param ortho_init: Whether to use or not orthogonal initialization
@@ -1007,7 +1008,7 @@ class ActorManyCriticPolicy(ActorCriticPolicy):
         observation_space: spaces.Space,
         action_space: spaces.Space,
         lr_schedule: Schedule,
-        n_costs: int, # The number of cost functions in CMDP
+        n_costs: int,
         net_arch: Optional[Union[List[int], Dict[str, List[int]]]] = None,
         activation_fn: Type[nn.Module] = nn.Tanh,
         ortho_init: bool = True,
