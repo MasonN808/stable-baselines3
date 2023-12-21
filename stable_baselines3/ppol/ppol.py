@@ -6,15 +6,15 @@ import torch as th
 from gymnasium import spaces
 from torch.nn import functional as F
 
-from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
-from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
+from stable_baselines3.common.on_policy_algorithm import GeneralizedOnPolicyAlgorithm
+from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticPolicy, ActorManyCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 
 SelfPPOL = TypeVar("SelfPPOL", bound="PPOL")
 
 
-class PPOL(OnPolicyAlgorithm):
+class PPOL(GeneralizedOnPolicyAlgorithm):
     """
     Proximal Policy Optimization with Lagrangian algorithm (PPOL) (clip version)
 
@@ -69,14 +69,14 @@ class PPOL(OnPolicyAlgorithm):
     """
 
     policy_aliases: ClassVar[Dict[str, Type[BasePolicy]]] = {
-        "MlpPolicy": ActorCriticPolicy,
+        "MlpPolicy": ActorManyCriticPolicy,
         "CnnPolicy": ActorCriticCnnPolicy,
         "MultiInputPolicy": MultiInputActorCriticPolicy,
     }
 
     def __init__(
         self,
-        policy: Union[str, Type[ActorCriticPolicy]],
+        policy: Union[str, Type[ActorManyCriticPolicy]],
         env: Union[GymEnv, str],
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
