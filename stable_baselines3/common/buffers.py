@@ -367,10 +367,13 @@ class RolloutBuffer(BaseBuffer):
     rewards: np.ndarray
     costs: np.ndarray
     advantages: np.ndarray
+    advantages_costs: np.ndarray
     returns: np.ndarray
+    returns_costs: np.ndarray
     episode_starts: np.ndarray
     log_probs: np.ndarray
     values: np.ndarray
+    values_costs: np.ndarray
 
     def __init__(
         self,
@@ -394,10 +397,13 @@ class RolloutBuffer(BaseBuffer):
         self.rewards = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.costs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.returns = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        self.returns_costs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.episode_starts = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.values = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        self.values_costs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.log_probs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.advantages = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        self.advantages_costs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.generator_ready = False
         super().reset()
 
@@ -470,10 +476,10 @@ class RolloutBuffer(BaseBuffer):
                 next_values = self.values_costs[step + 1]
             delta = self.costs[step] + self.gamma * next_values * next_non_terminal - self.values_costs[step]
             last_gae_lam = delta + self.gamma * self.gae_lambda * next_non_terminal * last_gae_lam
-            self.advantages[step] = last_gae_lam
+            self.advantages_costs[step] = last_gae_lam
         # TD(lambda) estimator, see Github PR #375 or "Telescoping in TD(lambda)"
         # in David Silver Lecture 4: https://www.youtube.com/watch?v=PnHCvfgC_ZA
-        self.returns_costs = self.advantages + self.values_costs
+        self.returns_costs = self.advantages_costs + self.values_costs
 
     def add(
         self,
@@ -483,6 +489,7 @@ class RolloutBuffer(BaseBuffer):
         cost: np.ndarray,
         episode_start: np.ndarray,
         value: th.Tensor,
+        value_cost: th.Tensor,
         log_prob: th.Tensor,
     ) -> None:
         """
@@ -513,6 +520,7 @@ class RolloutBuffer(BaseBuffer):
         self.costs[self.pos] = np.array(cost)
         self.episode_starts[self.pos] = np.array(episode_start)
         self.values[self.pos] = value.clone().cpu().numpy().flatten()
+        self.values_costs[self.pos] = value_cost.clone().cpu().numpy().flatten()
         self.log_probs[self.pos] = log_prob.clone().cpu().numpy()
         self.pos += 1
         if self.pos == self.buffer_size:
@@ -528,9 +536,12 @@ class RolloutBuffer(BaseBuffer):
                 "actions",
                 "costs",
                 "values",
+                "values_costs",
                 "log_probs",
                 "advantages",
+                "advantages_costs",
                 "returns",
+                "returns_costs",
             ]
 
             for tensor in _tensor_names:
@@ -556,9 +567,12 @@ class RolloutBuffer(BaseBuffer):
             self.actions[batch_inds],
             self.costs[batch_inds],
             self.values[batch_inds].flatten(),
+            self.values_costs[batch_inds].flatten(),
             self.log_probs[batch_inds].flatten(),
             self.advantages[batch_inds].flatten(),
+            self.advantages_costs[batch_inds].flatten(),
             self.returns[batch_inds].flatten(),
+            self.returns_costs[batch_inds].flatten(),
         )
         return RolloutBufferSamples(*tuple(map(self.to_torch, data)))
 
