@@ -221,6 +221,7 @@ class OnPolicyAlgorithm(BaseAlgorithm):
                 costs,
                 self._last_episode_starts,  # type: ignore[arg-type]
                 values,
+                values_costs,
                 log_probs,
             )
             self._last_obs = new_obs  # type: ignore[assignment]
