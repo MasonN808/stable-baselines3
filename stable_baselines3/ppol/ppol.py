@@ -196,9 +196,11 @@ class PPOL(OnPolicyAlgorithm):
         # train for n_epochs epochs
         for epoch in range(self.n_epochs):
             approx_kl_divs = []
+            # Cost mesurement history
+            # J_c = []
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
-                print(rollout_data.costs)
+                print(rollout_data.returns)
                 exit()
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
