@@ -79,6 +79,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         policy: Union[str, Type[ActorManyCriticPolicy]],
         env: Union[GymEnv, str],
         n_costs: int,
+        cost_threshold: float,
+        K_P: float,
+        K_I: float,
+        K_D: float,
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
         batch_size: int = 64,
@@ -155,7 +159,14 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     f"We recommend using a `batch_size` that is a factor of `n_steps * n_envs`.\n"
                     f"Info: (n_steps={self.n_steps} and n_envs={self.env.num_envs})"
                 )
+        
+        # Lagrangian parameters
         self.n_costs = n_costs
+        self.cost_threshold = cost_threshold
+        self.K_P = K_P
+        self.K_I = K_I
+        self.K_D = K_D
+
         self.batch_size = batch_size
         self.n_epochs = n_epochs
         self.clip_range = clip_range
@@ -192,18 +203,17 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             clip_range_vf = self.clip_range_vf(self._current_progress_remaining)  # type: ignore[operator]
 
         entropy_losses = []
-        pg_losses, value_losses = [], []
+        pg_losses, value_losses, cost_value_losses = [], [], []
         clip_fractions = []
 
         continue_training = True
         # train for n_epochs epochs
         for epoch in range(self.n_epochs):
             approx_kl_divs = []
-            # Cost mesurement history
-            # J_c = []
+            integral = th.zeros(1, self.batch_size)
+            j_c_prev = th.zeros(1, self.batch_size)
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
-                print(rollout_data.returns_costs)
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
                     # Convert discrete action from float to long
@@ -214,7 +224,21 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     self.policy.reset_noise(self.batch_size)
 
                 values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
-                values = values.flatten()
+                
+                with th.no_grad():
+                    # Separate the reward values from the cost values
+                    union_values = [i.flatten() for i in th.chunk(values, chunks=1+self.n_costs, dim=1)]
+                    values = union_values.pop(0)
+                    cost_values = union_values[0] # TODO: make more general later
+
+                    d = th.full(cost_values.size(), self.cost_threshold[0]) # TODO: make more general later
+
+                # First constraint #TODO: make more general later
+                # Apply feedback control
+                with th.no_grad():
+                    lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
+                    j_c_prev = cost_values
+
                 # Normalize advantage
                 advantages = rollout_data.advantages
                 # Normalization does not make sense if mini batchsize == 1, see GH issue #325
@@ -237,15 +261,25 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 if self.clip_range_vf is None:
                     # No clipping
                     values_pred = values
+                    cost_values_pred = cost_values
                 else:
                     # Clip the difference between old and new value
                     # NOTE: this depends on the reward scaling
                     values_pred = rollout_data.old_values + th.clamp(
                         values - rollout_data.old_values, -clip_range_vf, clip_range_vf
                     )
+                    # TODO: Change clip_range_vf to clip_range_costf
+                    cost_values_pred = rollout_data.old_values_costs + th.clamp(
+                        cost_values - rollout_data.old_values_costs, -clip_range_vf, clip_range_vf
+                    )
+
                 # Value loss using the TD(gae_lambda) target
                 value_loss = F.mse_loss(rollout_data.returns, values_pred)
                 value_losses.append(value_loss.item())
+
+                # Cost value loss using the TD(gae_lambda) target
+                cost_value_loss = F.mse_loss(rollout_data.returns_costs, cost_values_pred)
+                cost_value_losses.append(cost_value_loss.item())
 
                 # Entropy loss favor exploration
                 if entropy is None:
@@ -256,22 +290,11 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 entropy_losses.append(entropy_loss.item())
 
-                loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
+                # PPO surrogate loss
+                ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
 
-                # # get a list of lagrangian multiplier
-                # lags = [optim.get_lag() for optim in self.lag_optims]
-                # # Alg. 1 of http://proceedings.mlr.press/v119/stooke20a/stooke20a.pdf
-                # rescaling = 1. / (np.sum(lags) + 1) if self.rescaling else 1
-                # assert len(values) == len(lags), "lags and values length must be equal"
-                # stats = {"loss/rescaling": rescaling}
-                # loss_safety_total = 0.
-                # for i, (value, lagrangian) in enumerate(zip(values, lags)):
-                #     loss = torch.mean(value * lagrangian)
-                #     loss_safety_total += loss
-                #     suffix = "" if i == 0 else "_" + str(i)
-                #     stats["loss/lagrangian" + suffix] = lagrangian
-                #     stats["loss/actor_safety" + suffix] = loss.item()
-                # return loss_safety_total, stats
+                # Apply rescale to objective
+                loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
             
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
@@ -305,6 +328,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         self.logger.record("train/entropy_loss", np.mean(entropy_losses))
         self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
         self.logger.record("train/value_loss", np.mean(value_losses))
+        self.logger.record("train/cost_value_loss", np.mean(cost_value_losses))
+        self.logger.record("train/lagrangian_multiplier", lambdas.mean().item())
         self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/loss", loss.item())
@@ -316,6 +341,19 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         self.logger.record("train/clip_range", clip_range)
         if self.clip_range_vf is not None:
             self.logger.record("train/clip_range_vf", clip_range_vf)
+
+    @staticmethod
+    def pid_controller(d: float, K_P: float, K_I: float, K_D: float, j_c: th.tensor, j_c_prev: th.tensor, integral: float) -> th.tensor:
+        """
+        Algorithm 2 in https://arxiv.org/abs/2007.03964
+        """
+        assert K_P >= 0 and K_I >= 0 and K_D >= 0, "Learning rates for PID controller must be greater than or equivalent to 0"
+        proportion = j_c - d
+        derivative = th.abs(j_c-j_c_prev)
+        integral = th.abs(integral + proportion)
+        lmbda = th.abs(K_P*proportion + K_I*integral + K_D*derivative)
+        return lmbda
+
 
     def learn(
         self: SelfPPOL,
