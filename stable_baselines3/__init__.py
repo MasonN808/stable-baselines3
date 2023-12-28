@@ -9,6 +9,7 @@ from stable_baselines3.ppo import PPO
 from stable_baselines3.ppol import PPOL
 from stable_baselines3.ppo_penalty import PPO_Penalty
 from stable_baselines3.sac import SAC
+from stable_baselines3.sac_critical_point import SAC_Critical_Point
 from stable_baselines3.td3 import TD3
 
 # Read version from file
@@ -32,6 +33,7 @@ __all__ = [
     "PPOL",
     "PPO_Penalty",
     "SAC",
+    "SAC_Critical_Point",
     "TD3",
     "HerReplayBuffer",
     "get_system_info",
