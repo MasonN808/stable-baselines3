@@ -204,6 +204,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
         entropy_losses = []
         pg_losses, value_losses, cost_value_losses = [], [], []
+        cost_values_list, cost_returns = [], []
         clip_fractions = []
 
         continue_training = True
@@ -214,6 +215,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             j_c_prev = th.zeros(1, self.batch_size)
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
+                cost_returns.append(th.mean(rollout_data.returns_costs).item())
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
                     # Convert discrete action from float to long
@@ -225,13 +227,14 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
                 
-                with th.no_grad():
-                    # Separate the reward values from the cost values
-                    union_values = [i.flatten() for i in th.chunk(values, chunks=1+self.n_costs, dim=1)]
-                    values = union_values.pop(0)
-                    cost_values = union_values[0] # TODO: make more general later
+                # Separate the reward values from the cost values
+                union_values = [i.flatten() for i in th.chunk(values, chunks=1+self.n_costs, dim=1)]
+                values = union_values.pop(0)
+                cost_values = union_values[0] # TODO: make more general later
+                cost_values_list.append(th.mean(cost_values).item())
 
-                    d = th.full(cost_values.size(), self.cost_threshold[0]) # TODO: make more general later
+                # Cost Threshold
+                d = th.full(cost_values.size(), self.cost_threshold[0]) # TODO: make more general later
 
                 # First constraint #TODO: make more general later
                 # Apply feedback control
@@ -329,6 +332,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         self.logger.record("train/policy_gradient_loss", np.mean(pg_losses))
         self.logger.record("train/value_loss", np.mean(value_losses))
         self.logger.record("train/cost_value_loss", np.mean(cost_value_losses))
+        self.logger.record("train/cost_values", np.mean(cost_values_list))
+        self.logger.record("train/cost_returns", np.mean(cost_returns))
         self.logger.record("train/lagrangian_multiplier", lambdas.mean().item())
         self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
