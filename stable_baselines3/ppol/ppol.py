@@ -113,8 +113,6 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         # If a string is provided (env name), create the environment
         if isinstance(env, str):
             env = gym.make(env)
-        # Add Wrapper to record stats in env
-        env = RecordEpisodeStatistics(env)
 
         super().__init__(
             policy,
@@ -229,12 +227,12 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             for rollout_data in self.rollout_buffer.get(self.batch_size):
                 cost_returns.append(th.mean(rollout_data.returns_costs).item())
 
-                # Log env data
-                if 'episode' in rollout_data.info.keys():
-                    episode_rewards = rollout_data.info['episode']['r']
-                    episode_length = rollout_data.info['episode']['l']
-                    self.logger.record('env_monitor/total_rewards', episode_rewards)
-                    self.logger.record('env_monitor/episode_length', episode_length)
+                # # Log env data
+                # if 'episode' in rollout_data.info.keys():
+                #     episode_rewards = rollout_data.info['episode']['r']
+                #     episode_length = rollout_data.info['episode']['l']
+                #     self.logger.record('env_monitor/total_rewards', episode_rewards)
+                #     self.logger.record('env_monitor/episode_length', episode_length)
 
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
@@ -300,9 +298,12 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 value_loss = F.mse_loss(rollout_data.returns, values_pred)
                 value_losses.append(value_loss.item())
 
-                # Cost value loss using the TD(gae_lambda) target
-                cost_value_loss = F.mse_loss(rollout_data.returns_costs, cost_values_pred)
-                cost_value_losses.append(cost_value_loss.item())
+                if self.lagrange_multiplier:
+                    # Cost value loss using the TD(gae_lambda) target
+                    cost_value_loss = F.mse_loss(rollout_data.returns_costs, cost_values_pred)
+                    cost_value_losses.append(cost_value_loss.item())
+                else:
+                    cost_value_loss = 0 # TODO: This is not efficient if no lagrange multiplier exists (will fix later)
 
                 # Entropy loss favor exploration
                 if entropy is None:
@@ -318,7 +319,6 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 # Apply rescale to objective
                 loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
-            
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
@@ -390,7 +390,13 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         reset_num_timesteps: bool = True,
         progress_bar: bool = False,
     ) -> SelfPPOL:
-        return super().learn(
+        
+        # Wrap the environment with RecordEpisodeStatistics
+        if isinstance(self.env, gym.Env):
+            self.env = RecordEpisodeStatistics(self.env)
+
+        # Call the original learn method
+        result = super().learn(
             total_timesteps=total_timesteps,
             callback=callback,
             log_interval=log_interval,
@@ -398,3 +404,16 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             reset_num_timesteps=reset_num_timesteps,
             progress_bar=progress_bar,
         )
+
+        # After learning, process the collected episode statistics
+        episode_rewards = self.env.get_episode_rewards()
+        episode_lengths = self.env.get_episode_lengths()
+
+        if episode_rewards:
+            mean_reward = np.mean(episode_rewards)
+            mean_length = np.mean(episode_lengths)
+            self.logger.record('episode/mean_reward', mean_reward)
+            self.logger.record('episode/mean_length', mean_length)
+            # Add any additional logging here
+
+        return result
