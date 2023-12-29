@@ -80,9 +80,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         env: Union[GymEnv, str],
         n_costs: int,
         cost_threshold: float,
-        K_P: float,
-        K_I: float,
-        K_D: float,
+        K_P: float = 1,
+        K_I: float = 1,
+        K_D: float = 2,
+        lagrange_multiplier: bool = True,
         learning_rate: Union[float, Schedule] = 3e-4,
         n_steps: int = 2048,
         batch_size: int = 64,
@@ -166,6 +167,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         self.K_P = K_P
         self.K_I = K_I
         self.K_D = K_D
+        self.lagrange_multiplier = lagrange_multiplier
 
         self.batch_size = batch_size
         self.n_epochs = n_epochs
@@ -213,6 +215,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             approx_kl_divs = []
             integral = th.zeros(1, self.batch_size)
             j_c_prev = th.zeros(1, self.batch_size)
+            lambdas = th.zeros(1, self.batch_size)
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
                 cost_returns.append(th.mean(rollout_data.returns_costs).item())
@@ -237,9 +240,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     d = th.full(cost_values.size(), self.cost_threshold[0]) # TODO: make more general later
                 # Apply feedback control
                 with th.no_grad():
-                    # Cost Threshold
-                    lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
-                    j_c_prev = cost_values
+                    if self.lagrange_multiplier:
+                        # Cost Threshold
+                        lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
+                        j_c_prev = cost_values
 
                 # Normalize advantage
                 advantages = rollout_data.advantages
