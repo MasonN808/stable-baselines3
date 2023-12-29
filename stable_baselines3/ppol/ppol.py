@@ -392,8 +392,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
     ) -> SelfPPOL:
         
         # Wrap the environment with RecordEpisodeStatistics
-        if isinstance(self.env, gym.Env):
-            self.env = RecordEpisodeStatistics(self.env)
+        # if isinstance(self.env, gym.Env):
+        #     self.env = RecordEpisodeStatistics(self.env)
 
         # Call the original learn method
         result = super().learn(
