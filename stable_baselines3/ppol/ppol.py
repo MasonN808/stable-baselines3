@@ -1,5 +1,6 @@
 import warnings
 from typing import Any, ClassVar, Dict, Optional, Type, TypeVar, Union
+import gymnasium as gym
 
 import numpy as np
 import torch as th
@@ -10,6 +11,8 @@ from stable_baselines3.common.on_policy_algorithm import GeneralizedOnPolicyAlgo
 from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorManyCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
+from gymnasium.wrappers import RecordEpisodeStatistics
+
 
 SelfPPOL = TypeVar("SelfPPOL", bound="PPOL")
 
@@ -107,6 +110,12 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
     ):
+        # If a string is provided (env name), create the environment
+        if isinstance(env, str):
+            env = gym.make(env)
+        # Add Wrapper to record stats in env
+        env = RecordEpisodeStatistics(env)
+
         super().__init__(
             policy,
             env,
@@ -219,6 +228,14 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
                 cost_returns.append(th.mean(rollout_data.returns_costs).item())
+
+                # Log env data
+                if 'episode' in rollout_data.info.keys():
+                    episode_rewards = rollout_data.info['episode']['r']
+                    episode_length = rollout_data.info['episode']['l']
+                    self.logger.record('env_monitor/total_rewards', episode_rewards)
+                    self.logger.record('env_monitor/episode_length', episode_length)
+
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
                     # Convert discrete action from float to long
