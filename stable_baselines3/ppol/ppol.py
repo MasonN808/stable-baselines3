@@ -233,7 +233,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
                 cost_returns.append(th.mean(rollout_data.returns_costs).item())
-
+                
                 # # Log env data
                 # if 'episode' in rollout_data.info.keys():
                 #     episode_rewards = rollout_data.info['episode']['r']
@@ -348,22 +348,22 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
                 self.policy.optimizer.step()
 
-            # At the end of the epoch, gather and log episode statistics
-            if isinstance(self.env, DummyVecEnv):
-                for env in self.env.envs:
-                    # The env here could be a RecordEpisodeStatistics or another wrapper
-                    # You need to find the RecordEpisodeStatistics instance
-                    record_stats_wrapper = self.find_record_episode_statistics_wrapper(env)
-                    if record_stats_wrapper is not None:
-                        episode_rewards.extend(record_stats_wrapper.episode_rewards)
-                        episode_lengths.extend(record_stats_wrapper.episode_lengths)
+            # # At the end of the epoch, gather and log episode statistics
+            # if isinstance(self.env, DummyVecEnv):
+            #     for env in self.env.envs:
+            #         # The env here could be a RecordEpisodeStatistics or another wrapper
+            #         # You need to find the RecordEpisodeStatistics instance
+            #         record_stats_wrapper = self.find_record_episode_statistics_wrapper(env)
+            #         if record_stats_wrapper is not None:
+            #             episode_rewards.extend(record_stats_wrapper.episode_rewards)
+            #             episode_lengths.extend(record_stats_wrapper.episode_lengths)
 
-            # Calculate and log statistics for this epoch
-            if episode_rewards:
-                mean_reward = np.mean(episode_rewards)
-                mean_length = np.mean(episode_lengths)
-                self.logger.record('train/mean_reward', mean_reward)
-                self.logger.record('train/mean_length', mean_length)
+            # # Calculate and log statistics for this epoch
+            # if episode_rewards:
+            #     mean_reward = np.mean(episode_rewards)
+            #     mean_length = np.mean(episode_lengths)
+            #     self.logger.record('train/mean_reward', mean_reward)
+            #     self.logger.record('train/mean_length', mean_length)
 
             self._n_updates += 1
             if not continue_training:
@@ -435,30 +435,21 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             progress_bar=progress_bar,
         )
 
+        # Collect episode statistics
+        episode_rewards = []
+        episode_lengths = []
 
-        # # Collect episode statistics after training
-        # episode_rewards = []
-        # episode_lengths = []
+        for env_idx in range(self.env.num_envs):
+            env = self.env.get_attr('envs')[env_idx]
+            if hasattr(env, 'stats_recorder') and env.stats_recorder is not None:
+                episode_rewards.append(env.stats_recorder.episode_rewards)
+                episode_lengths.append(env.stats_recorder.episode_lengths)
 
-        # # Check if the environment is a DummyVecEnv
-        # if isinstance(self.env, DummyVecEnv):
-        #     print("In 1")
-        #     # Retrieve episode statistics from each sub-environment
-        #     for env_idx in range(self.env.num_envs):
-        #         print("In 2")
-        #         # Get the episode rewards and lengths from the RecordEpisodeStatistics wrapper
-        #         sub_env_episode_rewards = self.env.get_attr('episode_rewards', env_idx)
-        #         sub_env_episode_lengths = self.env.get_attr('episode_lengths', env_idx)
-
-        #         # Extend the main lists with the statistics from each sub-environment
-        #         episode_rewards.extend(sub_env_episode_rewards)
-        #         episode_lengths.extend(sub_env_episode_lengths)
-
-        # # Calculate and log statistics
-        # if episode_rewards:
-        #     mean_reward = np.mean(episode_rewards)
-        #     mean_length = np.mean(episode_lengths)
-        #     self.logger.record('episode/mean_reward', mean_reward)
-        #     self.logger.record('episode/mean_length', mean_length)
+        # Log episode statistics
+        if episode_rewards:
+            mean_reward = np.mean(episode_rewards)
+            mean_length = np.mean(episode_lengths)
+            self.logger.record('episode/mean_reward', mean_reward)
+            self.logger.record('episode/mean_length', mean_length)
 
         return result
