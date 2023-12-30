@@ -410,8 +410,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
         # Check if the environment is a DummyVecEnv
         if isinstance(self.env, DummyVecEnv):
+            print("In 1")
             # Retrieve episode statistics from each sub-environment
             for env_idx in range(self.env.num_envs):
+                print("In 2")
                 # Get the episode rewards and lengths from the RecordEpisodeStatistics wrapper
                 sub_env_episode_rewards = self.env.get_attr('episode_rewards', env_idx)
                 sub_env_episode_lengths = self.env.get_attr('episode_lengths', env_idx)
