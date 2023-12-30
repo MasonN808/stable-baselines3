@@ -357,8 +357,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                         episode_lengths.extend(sub_env.get_episode_lengths())
 
             # Calculate and log statistics for this epoch
+            print("ENTERED")
             if episode_rewards:
-                print("ENTERED")
                 mean_reward = np.mean(episode_rewards)
                 mean_length = np.mean(episode_lengths)
                 self.logger.record('train/mean_reward', mean_reward)
