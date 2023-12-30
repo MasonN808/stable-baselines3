@@ -350,12 +350,16 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
             # At the end of the epoch, gather and log episode statistics
             if isinstance(self.env, DummyVecEnv):
-                print("ENTERED")
                 for env_idx in range(self.env.num_envs):
-                    sub_env = self.env.envs[env_idx]
-                    if hasattr(sub_env, 'get_episode_rewards') and hasattr(sub_env, 'get_episode_lengths'):
-                        episode_rewards.extend(sub_env.get_episode_rewards())
-                        episode_lengths.extend(sub_env.get_episode_lengths())
+                    print("ENTERED")
+                    # Get the episode rewards and lengths from the RecordEpisodeStatistics wrapper
+                    sub_env_episode_rewards = self.env.get_attr('episode_rewards', env_idx)
+                    sub_env_episode_lengths = self.env.get_attr('episode_lengths', env_idx)
+
+                    # Extend the main lists with the statistics from each sub-environment
+                    episode_rewards.extend(sub_env_episode_rewards)
+                    episode_lengths.extend(sub_env_episode_lengths)
+
 
             # Calculate and log statistics for this epoch
             if episode_rewards:
