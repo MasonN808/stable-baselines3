@@ -219,12 +219,17 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         clip_fractions = []
 
         continue_training = True
+
         # train for n_epochs epochs
         for epoch in range(self.n_epochs):
             approx_kl_divs = []
             integral = th.zeros(1, self.batch_size)
             j_c_prev = th.zeros(1, self.batch_size)
             lambdas = th.zeros(1, self.batch_size)
+
+            # Gather episode statistics after each epoch
+            episode_rewards = []
+            episode_lengths = []
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
                 cost_returns.append(th.mean(rollout_data.returns_costs).item())
@@ -343,6 +348,21 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 th.nn.utils.clip_grad_norm_(self.policy.parameters(), self.max_grad_norm)
                 self.policy.optimizer.step()
 
+            # At the end of the epoch, gather and log episode statistics
+            if isinstance(self.env, DummyVecEnv):
+                for env_idx in range(self.env.num_envs):
+                    sub_env = self.env.envs[env_idx]
+                    if hasattr(sub_env, 'get_episode_rewards') and hasattr(sub_env, 'get_episode_lengths'):
+                        episode_rewards.extend(sub_env.get_episode_rewards())
+                        episode_lengths.extend(sub_env.get_episode_lengths())
+
+            # Calculate and log statistics for this epoch
+            if episode_rewards:
+                mean_reward = np.mean(episode_rewards)
+                mean_length = np.mean(episode_lengths)
+                self.logger.record('epoch/mean_reward', mean_reward)
+                self.logger.record('epoch/mean_length', mean_length)
+
             self._n_updates += 1
             if not continue_training:
                 break
@@ -404,29 +424,29 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         )
 
 
-        # Collect episode statistics after training
-        episode_rewards = []
-        episode_lengths = []
+        # # Collect episode statistics after training
+        # episode_rewards = []
+        # episode_lengths = []
 
-        # Check if the environment is a DummyVecEnv
-        if isinstance(self.env, DummyVecEnv):
-            print("In 1")
-            # Retrieve episode statistics from each sub-environment
-            for env_idx in range(self.env.num_envs):
-                print("In 2")
-                # Get the episode rewards and lengths from the RecordEpisodeStatistics wrapper
-                sub_env_episode_rewards = self.env.get_attr('episode_rewards', env_idx)
-                sub_env_episode_lengths = self.env.get_attr('episode_lengths', env_idx)
+        # # Check if the environment is a DummyVecEnv
+        # if isinstance(self.env, DummyVecEnv):
+        #     print("In 1")
+        #     # Retrieve episode statistics from each sub-environment
+        #     for env_idx in range(self.env.num_envs):
+        #         print("In 2")
+        #         # Get the episode rewards and lengths from the RecordEpisodeStatistics wrapper
+        #         sub_env_episode_rewards = self.env.get_attr('episode_rewards', env_idx)
+        #         sub_env_episode_lengths = self.env.get_attr('episode_lengths', env_idx)
 
-                # Extend the main lists with the statistics from each sub-environment
-                episode_rewards.extend(sub_env_episode_rewards)
-                episode_lengths.extend(sub_env_episode_lengths)
+        #         # Extend the main lists with the statistics from each sub-environment
+        #         episode_rewards.extend(sub_env_episode_rewards)
+        #         episode_lengths.extend(sub_env_episode_lengths)
 
-        # Calculate and log statistics
-        if episode_rewards:
-            mean_reward = np.mean(episode_rewards)
-            mean_length = np.mean(episode_lengths)
-            self.logger.record('episode/mean_reward', mean_reward)
-            self.logger.record('episode/mean_length', mean_length)
+        # # Calculate and log statistics
+        # if episode_rewards:
+        #     mean_reward = np.mean(episode_rewards)
+        #     mean_length = np.mean(episode_lengths)
+        #     self.logger.record('episode/mean_reward', mean_reward)
+        #     self.logger.record('episode/mean_length', mean_length)
 
         return result
