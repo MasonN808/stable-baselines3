@@ -360,8 +360,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             if episode_rewards:
                 mean_reward = np.mean(episode_rewards)
                 mean_length = np.mean(episode_lengths)
-                self.logger.record('epoch/mean_reward', mean_reward)
-                self.logger.record('epoch/mean_length', mean_length)
+                self.logger.record('train/mean_reward', mean_reward)
+                self.logger.record('train/mean_length', mean_length)
 
             self._n_updates += 1
             if not continue_training:
