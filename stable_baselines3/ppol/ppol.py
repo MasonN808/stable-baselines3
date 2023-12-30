@@ -12,6 +12,7 @@ from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorManyCri
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 from gymnasium.wrappers import RecordEpisodeStatistics
+from stable_baselines3.common.vec_env import VecEnvWrapper
 
 
 SelfPPOL = TypeVar("SelfPPOL", bound="PPOL")
@@ -405,15 +406,35 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             progress_bar=progress_bar,
         )
 
-        # After learning, process the collected episode statistics
-        episode_rewards = self.env.get_episode_rewards()
-        episode_lengths = self.env.get_episode_lengths()
 
+        # Collect episode statistics after training
+        episode_rewards = []
+        episode_lengths = []
+
+        if isinstance(self.env, VecEnvWrapper):
+            for env_idx in range(self.env.num_envs):
+                env = self.env.get_attr('envs')[env_idx]
+                wrapped_env = env.unwrapped if isinstance(env, VecEnvWrapper) else env
+                if hasattr(wrapped_env, 'episode_rewards'):
+                    episode_rewards.extend(wrapped_env.episode_rewards)
+                    episode_lengths.extend(wrapped_env.episode_lengths)
+
+        # Calculate and log statistics
         if episode_rewards:
             mean_reward = np.mean(episode_rewards)
             mean_length = np.mean(episode_lengths)
             self.logger.record('episode/mean_reward', mean_reward)
             self.logger.record('episode/mean_length', mean_length)
-            # Add any additional logging here
+
+        # # After learning, process the collected episode statistics
+        # episode_rewards = self.env.get_episode_rewards()
+        # episode_lengths = self.env.get_episode_lengths()
+
+        # if episode_rewards:
+        #     mean_reward = np.mean(episode_rewards)
+        #     mean_length = np.mean(episode_lengths)
+        #     self.logger.record('episode/mean_reward', mean_reward)
+        #     self.logger.record('episode/mean_length', mean_length)
+        #     # Add any additional logging here
 
         return result
