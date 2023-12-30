@@ -403,23 +403,23 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         )
 
 
-        # # Collect episode statistics after training
-        # episode_rewards = []
-        # episode_lengths = []
+        # Collect episode statistics after training
+        episode_rewards = []
+        episode_lengths = []
 
-        # if isinstance(self.env, VecEnvWrapper):
-        #     for env_idx in range(self.env.num_envs):
-        #         env = self.env.get_attr('envs')[env_idx]
-        #         wrapped_env = env.unwrapped if isinstance(env, VecEnvWrapper) else env
-        #         if hasattr(wrapped_env, 'episode_rewards'):
-        #             episode_rewards.extend(wrapped_env.episode_rewards)
-        #             episode_lengths.extend(wrapped_env.episode_lengths)
+        if isinstance(self.env, VecEnvWrapper):
+            for env_idx in range(self.env.num_envs):
+                env = self.env.get_attr('envs')[env_idx]
+                wrapped_env = env.unwrapped if isinstance(env, VecEnvWrapper) else env
+                if hasattr(wrapped_env, 'episode_rewards'):
+                    episode_rewards.extend(wrapped_env.episode_rewards)
+                    episode_lengths.extend(wrapped_env.episode_lengths)
 
-        # # Calculate and log statistics
-        # if episode_rewards:
-        #     mean_reward = np.mean(episode_rewards)
-        #     mean_length = np.mean(episode_lengths)
-        #     self.logger.record('episode/mean_reward', mean_reward)
-        #     self.logger.record('episode/mean_length', mean_length)
+        # Calculate and log statistics
+        if episode_rewards:
+            mean_reward = np.mean(episode_rewards)
+            mean_length = np.mean(episode_lengths)
+            self.logger.record('episode/mean_reward', mean_reward)
+            self.logger.record('episode/mean_length', mean_length)
 
         return result
