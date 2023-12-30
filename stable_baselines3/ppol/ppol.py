@@ -408,7 +408,9 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
     def find_record_episode_statistics_wrapper(env):
         while hasattr(env, 'env'):
             if isinstance(env, RecordEpisodeStatistics):
+                print("env is RecordEpisodeStatistics")
                 return env
+            print("env is not RecordEpisodeStatistics")
             env = env.env
         return None
 
