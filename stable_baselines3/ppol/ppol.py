@@ -233,7 +233,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
                 cost_returns.append(th.mean(rollout_data.returns_costs).item())
-                
+
                 # # Log env data
                 # if 'episode' in rollout_data.info.keys():
                 #     episode_rewards = rollout_data.info['episode']['r']
@@ -435,21 +435,21 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             progress_bar=progress_bar,
         )
 
-        # Collect episode statistics
-        episode_rewards = []
-        episode_lengths = []
+        # # Collect episode statistics
+        # episode_rewards = []
+        # episode_lengths = []
 
-        for env_idx in range(self.env.num_envs):
-            env = self.env.get_attr('envs')[env_idx]
-            if hasattr(env, 'stats_recorder') and env.stats_recorder is not None:
-                episode_rewards.append(env.stats_recorder.episode_rewards)
-                episode_lengths.append(env.stats_recorder.episode_lengths)
+        # for env_idx in range(self.env.num_envs):
+        #     env = self.env.get_attr('envs')[env_idx]
+        #     if hasattr(env, 'stats_recorder') and env.stats_recorder is not None:
+        #         episode_rewards.append(env.stats_recorder.episode_rewards)
+        #         episode_lengths.append(env.stats_recorder.episode_lengths)
 
-        # Log episode statistics
-        if episode_rewards:
-            mean_reward = np.mean(episode_rewards)
-            mean_length = np.mean(episode_lengths)
-            self.logger.record('episode/mean_reward', mean_reward)
-            self.logger.record('episode/mean_length', mean_length)
+        # # Log episode statistics
+        # if episode_rewards:
+        #     mean_reward = np.mean(episode_rewards)
+        #     mean_length = np.mean(episode_lengths)
+        #     self.logger.record('episode/mean_reward', mean_reward)
+        #     self.logger.record('episode/mean_length', mean_length)
 
         return result
