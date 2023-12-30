@@ -12,7 +12,8 @@ from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorManyCri
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn
 from gymnasium.wrappers import RecordEpisodeStatistics
-from stable_baselines3.common.vec_env import VecEnvWrapper
+from stable_baselines3.common.vec_env import DummyVecEnv
+
 
 
 SelfPPOL = TypeVar("SelfPPOL", bound="PPOL")
@@ -407,13 +408,17 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         episode_rewards = []
         episode_lengths = []
 
-        if isinstance(self.env, VecEnvWrapper):
+        # Check if the environment is a DummyVecEnv
+        if isinstance(self.env, DummyVecEnv):
+            # Retrieve episode statistics from each sub-environment
             for env_idx in range(self.env.num_envs):
-                env = self.env.get_attr('envs')[env_idx]
-                wrapped_env = env.unwrapped if isinstance(env, VecEnvWrapper) else env
-                if hasattr(wrapped_env, 'episode_rewards'):
-                    episode_rewards.extend(wrapped_env.episode_rewards)
-                    episode_lengths.extend(wrapped_env.episode_lengths)
+                # Get the episode rewards and lengths from the RecordEpisodeStatistics wrapper
+                sub_env_episode_rewards = self.env.get_attr('episode_rewards', env_idx)
+                sub_env_episode_lengths = self.env.get_attr('episode_lengths', env_idx)
+
+                # Extend the main lists with the statistics from each sub-environment
+                episode_rewards.extend(sub_env_episode_rewards)
+                episode_lengths.extend(sub_env_episode_lengths)
 
         # Calculate and log statistics
         if episode_rewards:
