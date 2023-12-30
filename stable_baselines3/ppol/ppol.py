@@ -350,16 +350,13 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
             # At the end of the epoch, gather and log episode statistics
             if isinstance(self.env, DummyVecEnv):
-                for env_idx in range(self.env.num_envs):
-                    print("ENTERED")
-                    # Get the episode rewards and lengths from the RecordEpisodeStatistics wrapper
-                    sub_env_episode_rewards = self.env.get_attr('episode_rewards', env_idx)
-                    sub_env_episode_lengths = self.env.get_attr('episode_lengths', env_idx)
-
-                    # Extend the main lists with the statistics from each sub-environment
-                    episode_rewards.extend(sub_env_episode_rewards)
-                    episode_lengths.extend(sub_env_episode_lengths)
-
+                for env in self.env.envs:
+                    # The env here could be a RecordEpisodeStatistics or another wrapper
+                    # You need to find the RecordEpisodeStatistics instance
+                    record_stats_wrapper = self.find_record_episode_statistics_wrapper(env)
+                    if record_stats_wrapper is not None:
+                        episode_rewards.extend(record_stats_wrapper.episode_rewards)
+                        episode_lengths.extend(record_stats_wrapper.episode_lengths)
 
             # Calculate and log statistics for this epoch
             if episode_rewards:
@@ -406,6 +403,14 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         integral = th.abs(integral + proportion)
         lmbda = th.abs(K_P*proportion + K_I*integral + K_D*derivative)
         return lmbda
+    
+
+    def find_record_episode_statistics_wrapper(env):
+        while hasattr(env, 'env'):
+            if isinstance(env, RecordEpisodeStatistics):
+                return env
+            env = env.env
+        return None
 
 
     def learn(
