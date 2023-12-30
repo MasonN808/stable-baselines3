@@ -404,7 +404,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         lmbda = th.abs(K_P*proportion + K_I*integral + K_D*derivative)
         return lmbda
     
-
+    @staticmethod
     def find_record_episode_statistics_wrapper(env):
         while hasattr(env, 'env'):
             if isinstance(env, RecordEpisodeStatistics):
