@@ -242,17 +242,15 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
 
-                with th.no_grad():
+                with th.no_grad(): # TODO: Discusss with Justin and Samer if this is necessary
                     # Separate the reward values from the cost values
                     union_values = [i.flatten() for i in th.chunk(values, chunks=1+self.n_costs, dim=1)]
                     values = union_values.pop(0)
-                    cost_values = union_values[0] # TODO: make more general later
-
-                    cost_values_list.append(th.mean(cost_values).item())
-                    d = th.full(cost_values.size(), self.cost_threshold[0]) # TODO: make more general later
-                # Apply feedback control
-                with th.no_grad():
+                    # Apply feedback control
                     if self.lagrange_multiplier:
+                        cost_values = union_values[0] # TODO: make more general later
+                        cost_values_list.append(th.mean(cost_values).item())
+                        d = th.full(cost_values.size(), self.cost_threshold[0]) # TODO: make more general later
                         # Cost Threshold
                         lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
                         j_c_prev = cost_values
@@ -279,17 +277,19 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 if self.clip_range_vf is None:
                     # No clipping
                     values_pred = values
-                    cost_values_pred = cost_values
+                    if self.lagrange_multiplier:
+                        cost_values_pred = cost_values
                 else:
                     # Clip the difference between old and new value
                     # NOTE: this depends on the reward scaling
                     values_pred = rollout_data.old_values + th.clamp(
                         values - rollout_data.old_values, -clip_range_vf, clip_range_vf
                     )
-                    # TODO: Change clip_range_vf to clip_range_costf
-                    cost_values_pred = rollout_data.old_values_costs + th.clamp(
-                        cost_values - rollout_data.old_values_costs, -clip_range_vf, clip_range_vf
-                    ) 
+                    if self.lagrange_multiplier:
+                        # TODO: Change clip_range_vf to clip_range_costf
+                        cost_values_pred = rollout_data.old_values_costs + th.clamp(
+                            cost_values - rollout_data.old_values_costs, -clip_range_vf, clip_range_vf
+                        ) 
 
                 # Value loss using the TD(gae_lambda) target
                 value_loss = F.mse_loss(rollout_data.returns, values_pred)
@@ -312,10 +312,13 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 entropy_losses.append(entropy_loss.item())
 
                 # PPO surrogate loss
-                ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
+                if self.lagrange_multiplier:
+                    ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
+                    # Apply rescale to objective
+                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
+                else: 
+                    loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
-                # Apply rescale to objective
-                loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
