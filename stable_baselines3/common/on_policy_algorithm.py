@@ -523,11 +523,11 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                 self._last_obs,  # type: ignore[arg-type]
                 actions,
                 rewards,
-                costs,
                 self._last_episode_starts,  # type: ignore[arg-type]
                 values_rewards,
-                values_costs,
                 log_probs,
+                costs=costs,
+                value_cost=values_costs,
             )
             self._last_obs = new_obs  # type: ignore[assignment]
             self._last_episode_starts = dones
