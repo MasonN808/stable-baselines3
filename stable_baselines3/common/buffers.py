@@ -489,8 +489,8 @@ class RolloutBuffer(BaseBuffer):
         episode_start: np.ndarray,
         value: th.Tensor,
         log_prob: th.Tensor,
-        cost: np.ndarray=np.zeros(1, dtype=np.float32),
-        value_cost: th.Tensor=np.zeros(1, dtype=np.float32),
+        cost: np.ndarray=None,
+        value_cost: th.Tensor=None,
     ) -> None:
         """
         :param obs: Observation
@@ -517,11 +517,13 @@ class RolloutBuffer(BaseBuffer):
         self.observations[self.pos] = np.array(obs)
         self.actions[self.pos] = np.array(action)
         self.rewards[self.pos] = np.array(reward)
-        self.costs[self.pos] = np.array(cost)
         self.episode_starts[self.pos] = np.array(episode_start)
         self.values[self.pos] = value.clone().cpu().numpy().flatten()
         self.values_costs[self.pos] = value_cost.clone().cpu().numpy().flatten()
-        self.log_probs[self.pos] = log_prob.clone().cpu().numpy()
+        if cost:
+            self.costs[self.pos] = np.array(cost)
+        if value_cost:
+            self.log_probs[self.pos] = log_prob.clone().cpu().numpy()
         self.pos += 1
         if self.pos == self.buffer_size:
             self.full = True
