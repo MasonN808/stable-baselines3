@@ -486,11 +486,11 @@ class RolloutBuffer(BaseBuffer):
         obs: np.ndarray,
         action: np.ndarray,
         reward: np.ndarray,
-        cost: np.ndarray,
         episode_start: np.ndarray,
         value: th.Tensor,
-        value_cost: th.Tensor,
         log_prob: th.Tensor,
+        cost: np.ndarray=np.zeros(dtype=np.float32),
+        value_cost: th.Tensor=np.zeros(dtype=np.float32),
     ) -> None:
         """
         :param obs: Observation
