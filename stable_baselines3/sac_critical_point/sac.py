@@ -144,7 +144,8 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             supported_action_spaces=(spaces.Box,),
             support_multi_env=True,
         )
-
+        
+        self.env = env
         self.target_entropy = target_entropy
         self.log_ent_coef = None  # type: Optional[th.Tensor]
         # Entropy coefficient / Entropy temperature
@@ -209,6 +210,14 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
 
         ent_coef_losses, ent_coefs = [], []
         actor_losses, critic_losses = [], []
+        
+        # Track n observations as critical points
+        critical_point_obs = []
+        # For critical point evaluation
+        for _ in range(10):
+            rand_action = self.env.action_space.sample()  # Take a random action
+            cp_observation, _, _, _ = self.env.step(rand_action)  # Perform the action
+            critical_point_obs.append(cp_observation)
 
         for gradient_step in range(gradient_steps):
             # Sample replay buffer
@@ -245,6 +254,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             with th.no_grad():
                 # Select action according to policy
                 next_actions, next_log_prob = self.actor.action_log_prob(replay_data.next_observations)
+                print(next_actions)
                 # Compute the next Q values: min over all critics targets
                 next_q_values = th.cat(self.critic_target(replay_data.next_observations, next_actions), dim=1)
                 next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
@@ -280,11 +290,17 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             actor_loss.backward()
             self.actor.optimizer.step()
 
+            # Log the stats of the critical points
+            for obs in critical_point_obs:
+                # TODO: Do the max q value calculation here and calculate the critical point
+                NotImplementedError
+                
             # Update target networks
             if gradient_step % self.target_update_interval == 0:
                 polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
                 # Copy running stats, see GH issue #996
                 polyak_update(self.batch_norm_stats, self.batch_norm_stats_target, 1.0)
+
 
         self._n_updates += gradient_steps
 
