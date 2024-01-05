@@ -156,6 +156,16 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
 
         if _init_setup_model:
             self._setup_model()
+        
+        # Quantized action points
+        # Format: (main engine power, side engine direction)
+        # Main engine: 0 (off), 0.5 (half power), 1 (full power)
+        # Side engine: -1 (left), 0 (none), 1 (right)
+        # discrete_actions = [
+        #     (0, -1), (0, 0), (0, 1),
+        #     (0.5, -1), (0.5, 0), (0.5, 1),
+        #     (1, -1), (1, 0), (1, 1)
+        # ]
 
     def _setup_model(self) -> None:
         super()._setup_model()
@@ -254,7 +264,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             with th.no_grad():
                 # Select action according to policy
                 next_actions, next_log_prob = self.actor.action_log_prob(replay_data.next_observations)
-                print(next_actions)
+
                 # Compute the next Q values: min over all critics targets
                 next_q_values = th.cat(self.critic_target(replay_data.next_observations, next_actions), dim=1)
                 next_q_values, _ = th.min(next_q_values, dim=1, keepdim=True)
@@ -293,8 +303,9 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             # Log the stats of the critical points
             for obs in critical_point_obs:
                 # TODO: Do the max q value calculation here and calculate the critical point
+                th.cat(self.critic(replay_data.next_observations, next_actions), dim=1)
                 NotImplementedError
-                
+
             # Update target networks
             if gradient_step % self.target_update_interval == 0:
                 polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
@@ -340,3 +351,25 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         else:
             saved_pytorch_variables = ["ent_coef_tensor"]
         return state_dicts, saved_pytorch_variables
+    
+    def generate_discrete_actions(env, intervals_per_dimension):
+        """
+        Generates discrete actions for a given Gym environment with a continuous action space.
+        
+        :param env: The Gym environment
+        :param intervals_per_dimension: How many intervals each dimension should be split into
+        :return: A list of discrete actions
+        """
+        # Ensure the environment has a continuous action space
+        if not isinstance(env.action_space, gym.spaces.Box):
+            raise ValueError("Environment does not have a continuous action space")
+
+        # Get the low and high action bounds
+        action_low = env.action_space.low
+        action_high = env.action_space.high
+
+        # Generate a grid of actions
+        action_ranges = [np.linspace(low, high, intervals_per_dimension) for low, high in zip(action_low, action_high)]
+        action_grid = np.array(np.meshgrid(*action_ranges)).T.reshape(-1, len(action_low))
+
+        return action_grid
