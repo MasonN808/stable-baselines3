@@ -242,7 +242,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
 
-                with th.no_grad(): # TODO: Discusss with Justin and Samer if this is necessary
+                with th.no_grad(): # TODO: Discusss with Justin and Samer if this is necessary. The cost related metrics monotonically increase if no_grad is not here (Confused why this occurs). 
                     # Separate the reward values from the cost values
                     union_values = [i.flatten() for i in th.chunk(values, chunks=1+self.n_costs, dim=1)]
                     values = union_values.pop(0)
@@ -286,7 +286,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                         values - rollout_data.old_values, -clip_range_vf, clip_range_vf
                     )
                     if self.lagrange_multiplier:
-                        # TODO: Change clip_range_vf to clip_range_costf
+                        # TODO: Change clip_range_vf to clip_range_costf (this may be irrelevant)
                         cost_values_pred = rollout_data.old_values_costs + th.clamp(
                             cost_values - rollout_data.old_values_costs, -clip_range_vf, clip_range_vf
                         ) 
