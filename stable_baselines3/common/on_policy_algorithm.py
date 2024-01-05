@@ -526,7 +526,7 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                 self._last_episode_starts,  # type: ignore[arg-type]
                 values_rewards,
                 log_probs,
-                costs=costs,
+                cost=costs,
                 value_cost=values_costs,
             )
             self._last_obs = new_obs  # type: ignore[assignment]
