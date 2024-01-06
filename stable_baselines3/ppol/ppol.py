@@ -240,11 +240,11 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 if self.use_sde:
                     self.policy.reset_noise(self.batch_size)
 
-                values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
+                all_values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
 
                 with th.no_grad(): # TODO: Discusss with Justin and Samer if this is necessary. The cost related metrics monotonically increase if no_grad is not here (Confused why this occurs). 
                     # Separate the reward values from the cost values
-                    union_values = [i.flatten() for i in th.chunk(values, chunks=1+self.n_costs, dim=1)]
+                    union_values = [i.flatten() for i in th.chunk(all_values, chunks=1+self.n_costs, dim=1)]
                     values = union_values.pop(0)
                     # Apply feedback control
                     if self.lagrange_multiplier:
