@@ -3,6 +3,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Un
 import numpy as np
 import torch as th
 from gymnasium import spaces
+import gymnasium as gym
 from torch.nn import functional as F
 
 from stable_baselines3.common.buffers import ReplayBuffer
@@ -92,6 +93,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         policy: Union[str, Type[SACPolicy]],
         env: Union[GymEnv, str],
         learning_rate: Union[float, Schedule] = 3e-4,
+        num_observation_points: int = 10,
         buffer_size: int = 1_000_000,  # 1e6
         learning_starts: int = 100,
         batch_size: int = 256,
@@ -156,16 +158,25 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
 
         if _init_setup_model:
             self._setup_model()
+
+        # Critical Point params
+        self.num_observation_points = num_observation_points
         
+        # TODO: Verify with Saad that this is correct
+        # Track n observations as critical points
+        self.critical_point_obs = []
+        # For critical point evaluation
+        for _ in range(10):
+            self.env.reset()
+            rand_action = [self.env.action_space.sample()]
+            # print(f'action {rand_action}')
+            cp_observation, _, _, _ = self.env.step(rand_action)  # Perform the action
+            # print(f'observation {cp_observation}')
+
+            self.critical_point_obs.append(cp_observation)
+
         # Quantized action points
-        # Format: (main engine power, side engine direction)
-        # Main engine: 0 (off), 0.5 (half power), 1 (full power)
-        # Side engine: -1 (left), 0 (none), 1 (right)
-        # discrete_actions = [
-        #     (0, -1), (0, 0), (0, 1),
-        #     (0.5, -1), (0.5, 0), (0.5, 1),
-        #     (1, -1), (1, 0), (1, 1)
-        # ]
+        self.quantized_actions = self.generate_discrete_actions(env, 10)
 
     def _setup_model(self) -> None:
         super()._setup_model()
@@ -220,14 +231,6 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
 
         ent_coef_losses, ent_coefs = [], []
         actor_losses, critic_losses = [], []
-        
-        # Track n observations as critical points
-        critical_point_obs = []
-        # For critical point evaluation
-        for _ in range(10):
-            rand_action = self.env.action_space.sample()  # Take a random action
-            cp_observation, _, _, _ = self.env.step(rand_action)  # Perform the action
-            critical_point_obs.append(cp_observation)
 
         for gradient_step in range(gradient_steps):
             # Sample replay buffer
@@ -352,6 +355,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             saved_pytorch_variables = ["ent_coef_tensor"]
         return state_dicts, saved_pytorch_variables
     
+    @staticmethod
     def generate_discrete_actions(env, intervals_per_dimension):
         """
         Generates discrete actions for a given Gym environment with a continuous action space.
@@ -367,6 +371,8 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         # Get the low and high action bounds
         action_low = env.action_space.low
         action_high = env.action_space.high
+
+        print(action_low, action_high)
 
         # Generate a grid of actions
         action_ranges = [np.linspace(low, high, intervals_per_dimension) for low, high in zip(action_low, action_high)]
