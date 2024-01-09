@@ -162,9 +162,9 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         # Critical Point params
         self.num_observation_points = num_observation_points
         
-        # TODO: Verify with Saad that this is correct
+        # TODO: Verify with Saad that this is correct. It seems that it samples from the beginning from the episode as seen in the renders. 
         # Track n observations as critical points
-        self.critical_point_obs = []
+        critical_point_obs = []
         # For critical point evaluation
         for _ in range(10):
             self.env.reset()
@@ -172,11 +172,15 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             # print(f'action {rand_action}')
             cp_observation, _, _, _ = self.env.step(rand_action)  # Perform the action
             # print(f'observation {cp_observation}')
+            if isinstance(critical_point_obs, list):
+                critical_point_obs = th.tensor(cp_observation)
+            else:
+                cp_observation = th.tensor(cp_observation)
+                critical_point_obs = th.cat((critical_point_obs, cp_observation), dim=0)
 
-            self.critical_point_obs.append(cp_observation)
-
+        self.critical_point_obs = critical_point_obs
         # Quantized action points
-        self.quantized_actions = self.generate_discrete_actions(env, 10)
+        self.quantized_actions = th.tensor(self.generate_discrete_actions(env, 10), dtype=th.float32)
 
     def _setup_model(self) -> None:
         super()._setup_model()
@@ -303,11 +307,15 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             actor_loss.backward()
             self.actor.optimizer.step()
 
-            # Log the stats of the critical points
-            for obs in critical_point_obs:
-                # TODO: Do the max q value calculation here and calculate the critical point
-                th.cat(self.critic(replay_data.next_observations, next_actions), dim=1)
-                NotImplementedError
+            # Do the max q value calculation here and calculate the critical point
+            with th.no_grad():
+                for idx, obs in enumerate(self.critical_point_obs):
+                    stacked_obs = th.stack([obs]*self.quantized_actions.size()[0])
+                    # next_q_values = self.critic(stacked_obs, self.quantized_actions)
+                    q_values = th.cat(self.critic(stacked_obs, self.quantized_actions), dim=1)
+                    q_values, _ = th.min(q_values, dim=1, keepdim=True)
+                    critical_value = th.max(q_values, dim=0)[0] - th.min(q_values, dim=0)[0]
+                    self.logger.record(f"train/critical_points/{idx}", critical_value)
 
             # Update target networks
             if gradient_step % self.target_update_interval == 0:
