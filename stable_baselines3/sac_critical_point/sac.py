@@ -99,6 +99,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         batch_size: int = 256,
         tau: float = 0.005,
         gamma: float = 0.99,
+        n_tracked_obs: int = 10,
         train_freq: Union[int, Tuple[int, str]] = 1,
         gradient_steps: int = 1,
         action_noise: Optional[ActionNoise] = None,
@@ -165,9 +166,9 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         # TODO: Verify with Saad that this is correct. It seems that it samples from the beginning from the episode as seen in the renders. 
         # Track n observations as critical points
         critical_point_obs = []
+        self.env.reset()
         # For critical point evaluation
-        for _ in range(10):
-            self.env.reset()
+        for _ in range(n_obs):
             rand_action = [self.env.action_space.sample()]
             # print(f'action {rand_action}')
             cp_observation, _, _, _ = self.env.step(rand_action)  # Perform the action
