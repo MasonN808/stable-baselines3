@@ -169,15 +169,16 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         self.env.reset()
         # For critical point evaluation
         for _ in range(n_tracked_obs):
-            rand_action = [self.env.action_space.sample()]
-            # print(f'action {rand_action}')
-            cp_observation, _, _, _ = self.env.step(rand_action)  # Perform the action
-            # print(f'observation {cp_observation}')
-            if isinstance(critical_point_obs, list):
-                critical_point_obs = th.tensor(cp_observation)
-            else:
-                cp_observation = th.tensor(cp_observation)
-                critical_point_obs = th.cat((critical_point_obs, cp_observation), dim=0)
+            # Get random obs uniformly
+            cp_observation = self.env.observation_space.sample()
+            # Convert cp_observation to a PyTorch tensor and add an extra dimension
+            cp_observation_tensor = th.tensor(cp_observation).unsqueeze(0)
+
+            # Append the new observation tensor
+            critical_point_obs.append(cp_observation_tensor)
+
+        # Concatenate all observation tensors along dimension 0
+        critical_point_obs = th.cat(critical_point_obs, dim=0)
 
         self.critical_point_obs = critical_point_obs
         # Quantized action points
