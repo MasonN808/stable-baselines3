@@ -168,7 +168,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         critical_point_obs = []
         self.env.reset()
         # For critical point evaluation
-        for _ in range(n_obs):
+        for _ in range(n_tracked_obs):
             rand_action = [self.env.action_space.sample()]
             # print(f'action {rand_action}')
             cp_observation, _, _, _ = self.env.step(rand_action)  # Perform the action
