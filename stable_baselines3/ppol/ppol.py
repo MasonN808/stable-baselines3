@@ -299,8 +299,6 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     # Cost value loss using the TD(gae_lambda) target
                     cost_value_loss = F.mse_loss(rollout_data.returns_costs, cost_values_pred)
                     cost_value_losses.append(cost_value_loss.item())
-                else:
-                    cost_value_loss = 0 # TODO: This is not efficient if no lagrange multiplier exists (will fix later)
 
                 # Entropy loss favor exploration
                 if entropy is None:
@@ -315,8 +313,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 if self.lagrange_multiplier:
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
-                    # loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
-                    loss = (ppo_loss - th.sum(lambdas * cost_values))
+                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
                 else: 
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
