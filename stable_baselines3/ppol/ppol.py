@@ -229,7 +229,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
-                cost_returns.append(th.mean(rollout_data.returns_costs).item())
+                if self.n_costs > 0:
+                    cost_returns.append(th.mean(rollout_data.returns_costs).item())
 
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
