@@ -289,7 +289,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                         # TODO: Change clip_range_vf to clip_range_costf (this may be irrelevant)
                         cost_values_pred = rollout_data.old_values_costs + th.clamp(
                             cost_values - rollout_data.old_values_costs, -clip_range_vf, clip_range_vf
-                        ) 
+                        )
 
                 # Value loss using the TD(gae_lambda) target
                 value_loss = F.mse_loss(rollout_data.returns, values_pred)
@@ -315,7 +315,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 if self.lagrange_multiplier:
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
-                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
+                    # loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
+                    loss = (ppo_loss - th.sum(lambdas * cost_values))
                 else: 
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
