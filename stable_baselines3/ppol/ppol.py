@@ -316,9 +316,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 #     loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
                 # else: 
                 #     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
-                ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
+                # ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
+                ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss)
                 # Apply rescale to objective
-                loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * rollout_data.returns_costs))
+                loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * rollout_data.returns_costs)) # TODO: rollout_data.returns_costs or cost_values?
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
