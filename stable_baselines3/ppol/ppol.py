@@ -354,11 +354,11 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         self.logger.record("train/cost_value_loss", np.mean(cost_value_losses))
         self.logger.record("train/cost_values", np.mean(cost_values_list))
         self.logger.record("train/cost_returns", np.mean(cost_returns))
-        # self.logger.record("train/lagrangian_multiplier", lambdas.mean().item())
+        self.logger.record("train/lagrangian_multiplier", lambdas.mean().item())
         self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
-        # self.logger.record("train/loss", loss.item())
-        # self.logger.record("train/entropy", entropy_loss.item())
+        self.logger.record("train/loss", loss.item())
+        self.logger.record("train/entropy", entropy_loss.item())
         self.logger.record("train/explained_variance", explained_var)
         if hasattr(self.policy, "log_std"):
             self.logger.record("train/std", th.exp(self.policy.log_std).mean().item())
@@ -378,7 +378,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         derivative = th.abs(j_c-j_c_prev)
         integral = th.abs(integral + proportion)
         lmbda = th.abs(K_P*proportion + K_I*integral + K_D*derivative)
-        return lmbda.requires_grad_(False)
+        return lmbda.detach()
     
     @staticmethod
     def find_record_episode_statistics_wrapper(env):
