@@ -223,9 +223,9 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         # train for n_epochs epochs
         for epoch in range(self.n_epochs):
             approx_kl_divs = []
-            integral = th.zeros(1, self.batch_size)
-            j_c_prev = th.zeros(1, self.batch_size)
-            lambdas = th.zeros(1, self.batch_size)
+            integral = th.zeros(1, self.batch_size, requires_grad=False)
+            j_c_prev = th.zeros(1, self.batch_size, requires_grad=False)
+            lambdas = th.zeros(1, self.batch_size, requires_grad=False)
 
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
@@ -250,7 +250,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 if self.lagrange_multiplier:
                     cost_values = union_values[0] # TODO: make more general later if more costs present
                     cost_values_list.append(th.mean(cost_values).item())
-                    d = th.full(cost_values.size(), self.cost_threshold[0]) # TODO: make more general later if more costs present
+                    d = th.full(cost_values.size(), self.cost_threshold[0], requires_grad=False) # TODO: make more general later if more costs present
                     # Cost Threshold
                     lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
                     j_c_prev = cost_values
