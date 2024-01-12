@@ -38,7 +38,7 @@ def set_random_seed(seed: int, using_cuda: bool = False) -> None:
     np.random.seed(seed)
     # seed the RNG for all devices (both CPU and CUDA)
     th.manual_seed(seed)
-
+    th.use_deterministic_algorithms(True)
     if using_cuda:
         # Deterministic operations for CuDNN, it may impact performances
         th.backends.cudnn.deterministic = True
