@@ -378,7 +378,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         derivative = th.abs(j_c-j_c_prev)
         integral = th.abs(integral + proportion)
         lmbda = th.abs(K_P*proportion + K_I*integral + K_D*derivative)
-        return lmbda
+        return lmbda.requires_grad_(False)
     
     @staticmethod
     def find_record_episode_statistics_wrapper(env):
