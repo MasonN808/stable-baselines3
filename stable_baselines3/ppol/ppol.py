@@ -242,18 +242,17 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 all_values, log_prob, entropy = self.policy.evaluate_actions(rollout_data.observations, actions)
 
-                with th.no_grad(): # TODO: Discusss with Justin and Samer if this is necessary. The cost related metrics monotonically increase if no_grad is not here (Confused why this occurs). 
-                    # Separate the reward values from the cost values
-                    union_values = [i.flatten() for i in th.chunk(all_values, chunks=1+self.n_costs, dim=1)]
-                    values = union_values.pop(0)
-                    # Apply feedback control
-                    if self.lagrange_multiplier:
-                        cost_values = union_values[0] # TODO: make more general later
-                        cost_values_list.append(th.mean(cost_values).item())
-                        d = th.full(cost_values.size(), self.cost_threshold[0]) # TODO: make more general later
-                        # Cost Threshold
-                        lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
-                        j_c_prev = cost_values
+                # Separate the reward values from the cost values
+                union_values = [i.flatten() for i in th.chunk(all_values, chunks=1+self.n_costs, dim=1)]
+                values = union_values.pop(0)
+                # Apply feedback control
+                if self.lagrange_multiplier:
+                    cost_values = union_values[0] # TODO: make more general later if more costs present
+                    cost_values_list.append(th.mean(cost_values).item())
+                    d = th.full(cost_values.size(), self.cost_threshold[0]) # TODO: make more general later if more costs present
+                    # Cost Threshold
+                    lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
+                    j_c_prev = cost_values
 
                 # Normalize advantage
                 advantages = rollout_data.advantages
