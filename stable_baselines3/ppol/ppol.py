@@ -316,10 +316,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 #     loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
                 # else: 
                 #     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
-                # ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
-                ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss)
+                ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
+                # ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss)
                 # Apply rescale to objective
-                loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * rollout_data.returns_costs)) # TODO: rollout_data.returns_costs or cost_values?
+                loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values)) # TODO: rollout_data.returns_costs or cost_values?
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
                 # and discussion in PR #419: https://github.com/DLR-RM/stable-baselines3/pull/419
@@ -376,9 +376,9 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         """
         assert K_P >= 0 and K_I >= 0 and K_D >= 0, "Learning rates for PID controller must be greater than or equivalent to 0"
         proportion = j_c - d
-        derivative = th.abs(j_c-j_c_prev)
-        integral = th.abs(integral + proportion)
-        lmbda = th.abs(K_P*proportion + K_I*integral + K_D*derivative)
+        derivative = th.clamp(j_c-j_c_prev, min=0)
+        integral = th.clamp(integral + proportion, min=0)
+        lmbda = th.clamp(K_P*proportion + K_I*integral + K_D*derivative, min=0)
         return lmbda.detach()
     
     @staticmethod
