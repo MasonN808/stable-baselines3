@@ -205,6 +205,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         """
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
+        # Print the weights for each layer in the Sequential object
+        for layer in self.policy.mlp_extractor.policy_net:
+            for name, param in layer.named_parameters():
+                print(f"{name} : {param.data}")
         # Update optimizer learning rate
         self._update_learning_rate(self.policy.optimizer)
         # Compute current clip range
