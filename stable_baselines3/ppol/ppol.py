@@ -229,7 +229,6 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
-                print(rollout_data.actions)
                 if self.n_costs > 0:
                     cost_returns.append(th.mean(rollout_data.returns_costs).item())
 
@@ -317,6 +316,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
                     loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
+                    print(f"policy_loss: {policy_loss}")
+                    print(f"entropy_loss: {entropy_loss}")
+                    print(f"value_loss: {value_loss}")
+                    print(f"cost_value_loss: {cost_value_loss}")
                     print(f"ppo_loss: {ppo_loss}")
                     print(f"loss: {loss}")
                 else:
