@@ -501,8 +501,9 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             costs = []
             for idx, done in enumerate(dones):
                 # Extract costs fron info dict
-                cost = np.array(infos[idx].get("cost"))
-                costs.append(cost)
+                if infos[idx].get("cost"):
+                    cost = np.array(infos[idx].get("cost"))
+                    costs.append(cost)
                 if (
                     done
                     and infos[idx].get("terminal_observation") is not None
@@ -512,7 +513,8 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                     with th.no_grad():
                         terminal_value = self.policy.predict_values(terminal_obs).flatten()[0]  # type: ignore[arg-type]
                     rewards[idx] += self.gamma * terminal_value
-            costs = np.concatenate(costs)
+            if costs:
+                costs = np.concatenate(costs)
 
             # Parse values from critic network
             values = values.flatten()
@@ -537,7 +539,8 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))  # type: ignore[arg-type]
 
         rollout_buffer.compute_returns_and_advantage(last_values=values_rewards, dones=dones)
-        rollout_buffer.compute_returns_and_advantage_costs(last_values_costs=values_costs, dones=dones)
+        if values_costs.numel() != 0:
+            rollout_buffer.compute_returns_and_advantage_costs(last_values_costs=values_costs, dones=dones)
 
         callback.update_locals(locals())
 

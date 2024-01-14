@@ -520,9 +520,9 @@ class RolloutBuffer(BaseBuffer):
         self.episode_starts[self.pos] = np.array(episode_start)
         self.values[self.pos] = value.clone().cpu().numpy().flatten()
         self.log_probs[self.pos] = log_prob.clone().cpu().numpy()
-        if cost is not None:
+        if cost is not None and len(cost) > 0:
             self.costs[self.pos] = np.array(cost)
-        if value_cost is not None:
+        if value_cost is not None and value_cost.numel() > 0:
             self.values_costs[self.pos] = value_cost.clone().cpu().numpy().flatten()
         self.pos += 1
         if self.pos == self.buffer_size:
