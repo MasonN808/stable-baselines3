@@ -138,6 +138,7 @@ def create_mlp(
 
     for idx in range(len(net_arch) - 1):
         modules.append(nn.Linear(net_arch[idx], net_arch[idx + 1], bias=with_bias))
+        print(f"WEIGHTS INITIAL: {nn.Linear(net_arch[idx], net_arch[idx + 1], bias=with_bias).weight}")
         modules.append(activation_fn())
 
     if output_dim > 0:
