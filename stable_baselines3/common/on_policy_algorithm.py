@@ -172,10 +172,19 @@ class OnPolicyAlgorithm(BaseAlgorithm):
                 # Sample a new noise matrix
                 self.policy.reset_noise(env.num_envs)
 
+            print("BUFFER:")
+            # Print the weights for each layer in the Sequential object
+            for layer in self.policy.mlp_extractor.policy_net:
+                for name, param in layer.named_parameters():
+                    print(f"{name} : {param.data}")
+            if n_steps == 3:
+                exit()
+
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
                 print(f"OBS TENSOR: {obs_tensor}")
+                print(f"POLICY: {self.policy}")
                 actions, values, log_probs = self.policy(obs_tensor)
             actions = actions.cpu().numpy()
 
@@ -473,11 +482,20 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             if self.use_sde and self.sde_sample_freq > 0 and n_steps % self.sde_sample_freq == 0:
                 # Sample a new noise matrix
                 self.policy.reset_noise(env.num_envs)
+            
+            print("BUFFER:")
+            # Print the weights for each layer in the Sequential object
+            for layer in self.policy.mlp_extractor.policy_net:
+                for name, param in layer.named_parameters():
+                    print(f"{name} : {param.data}")
+            if n_steps == 3:
+                exit()
 
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
                 print(f"OBS TENSOR: {obs_tensor}")
+                print(f"POLICY: {self.policy}")
                 actions, values, log_probs = self.policy(obs_tensor)
             actions = actions.cpu().numpy()
             print(f"BUFFER UNCLIPPED ACTION: {actions}")
@@ -506,13 +524,6 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
 
             self._update_info_buffer(infos)
 
-            print("BUFFER:")
-            # Print the weights for each layer in the Sequential object
-            for layer in self.policy.mlp_extractor.policy_net:
-                for name, param in layer.named_parameters():
-                    print(f"{name} : {param.data}")
-            if n_steps == 3:
-                exit()
             n_steps += 1
 
             if isinstance(self.action_space, spaces.Discrete):
