@@ -566,6 +566,9 @@ class ActorCriticPolicy(BasePolicy):
             activation_fn=self.activation_fn,
             device=self.device,
         )
+        for layer in self.policy.mlp_extractor.policy_net:
+            for name, param in layer.named_parameters():
+                print(f"{name} : {param.data}")
 
     def _build(self, lr_schedule: Schedule) -> None:
         """
@@ -1195,6 +1198,9 @@ class ActorManyCriticPolicy(BasePolicy):
             activation_fn=self.activation_fn,
             device=self.device,
         )
+        for layer in self.policy.mlp_extractor.policy_net:
+            for name, param in layer.named_parameters():
+                print(f"{name} : {param.data}")
 
     def forward(self, obs: th.Tensor, deterministic: bool = False) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
