@@ -213,14 +213,6 @@ class OnPolicyAlgorithm(BaseAlgorithm):
             callback.update_locals(locals())
             if not callback.on_step():
                 return False
-            
-            print("BUFFER:")
-            # Print the weights for each layer in the Sequential object
-            for layer in self.policy.mlp_extractor.policy_net:
-                for name, param in layer.named_parameters():
-                    print(f"{name} : {param.data}")
-            if n_steps == 3:
-                exit()
 
             self._update_info_buffer(infos)
             n_steps += 1
