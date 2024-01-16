@@ -178,6 +178,8 @@ class OnPolicyAlgorithm(BaseAlgorithm):
                 actions, values, log_probs = self.policy(obs_tensor)
             actions = actions.cpu().numpy()
 
+            print(f"BUFFER UNCLIPPED ACTION: {actions}")
+
             # Rescale and perform action
             clipped_actions = actions
 
@@ -193,8 +195,8 @@ class OnPolicyAlgorithm(BaseAlgorithm):
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
 
-            print(f"BUFFER ACTION: {clipped_actions}")
-            
+            print(f"BUFFER CLIPPED ACTION: {clipped_actions}")
+
             self.num_timesteps += env.num_envs
 
             # Give access to local variables
@@ -476,7 +478,7 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
                 actions, values, log_probs = self.policy(obs_tensor)
             actions = actions.cpu().numpy()
-
+            print(f"BUFFER UNCLIPPED ACTION: {actions}")
             # Rescale and perform action
             clipped_actions = actions
 
@@ -491,7 +493,7 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                     clipped_actions = np.clip(actions, self.action_space.low, self.action_space.high)
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
-            print(f"BUFFER ACTION: {clipped_actions}")
+            print(f"BUFFER CLIPPED ACTION: {clipped_actions}")
 
             self.num_timesteps += env.num_envs
 
