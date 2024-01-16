@@ -172,23 +172,23 @@ class OnPolicyAlgorithm(BaseAlgorithm):
                 # Sample a new noise matrix
                 self.policy.reset_noise(env.num_envs)
 
-            print("BUFFER:")
-            # Print the weights for each layer in the Sequential object
-            for layer in self.policy.mlp_extractor.policy_net:
-                for name, param in layer.named_parameters():
-                    print(f"{name} : {param.data}")
+            # print("BUFFER:")
+            # # Print the weights for each layer in the Sequential object
+            # for layer in self.policy.mlp_extractor.policy_net:
+            #     for name, param in layer.named_parameters():
+            #         print(f"{name} : {param.data}")
             # if n_steps == 3:
             #     exit()
 
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
-                print(f"OBS TENSOR: {obs_tensor}")
-                print(f"POLICY: {self.policy}")
-                actions, values, log_probs = self.policy(obs_tensor)
+                # print(f"OBS TENSOR: {obs_tensor}")
+                # print(f"POLICY: {self.policy}")
+                actions, values, log_probs = self.policy(obs_tensor, deterministic=True)
             actions = actions.cpu().numpy()
 
-            print(f"BUFFER UNCLIPPED ACTION: {actions}")
+            # print(f"BUFFER UNCLIPPED ACTION: {actions}")
 
             # Rescale and perform action
             clipped_actions = actions
@@ -205,7 +205,7 @@ class OnPolicyAlgorithm(BaseAlgorithm):
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
 
-            print(f"BUFFER CLIPPED ACTION: {clipped_actions}")
+            # print(f"BUFFER CLIPPED ACTION: {clipped_actions}")
 
             self.num_timesteps += env.num_envs
 
@@ -475,22 +475,22 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                 # Sample a new noise matrix
                 self.policy.reset_noise(env.num_envs)
             
-            print("BUFFER:")
-            # Print the weights for each layer in the Sequential object
-            for layer in self.policy.mlp_extractor.policy_net:
-                for name, param in layer.named_parameters():
-                    print(f"{name} : {param.data}")
+            # print("BUFFER:")
+            # # Print the weights for each layer in the Sequential object
+            # for layer in self.policy.mlp_extractor.policy_net:
+            #     for name, param in layer.named_parameters():
+            #         print(f"{name} : {param.data}")
             # if n_steps == 3:
             #     exit()
 
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
-                print(f"OBS TENSOR: {obs_tensor}")
-                print(f"POLICY: {self.policy}")
-                actions, values, log_probs = self.policy(obs_tensor)
+                # print(f"OBS TENSOR: {obs_tensor}")
+                # print(f"POLICY: {self.policy}")
+                actions, values, log_probs = self.policy(obs_tensor, deterministic=True)
             actions = actions.cpu().numpy()
-            print(f"BUFFER UNCLIPPED ACTION: {actions}")
+            # print(f"BUFFER UNCLIPPED ACTION: {actions}")
             # Rescale and perform action
             clipped_actions = actions
 
@@ -505,7 +505,7 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                     clipped_actions = np.clip(actions, self.action_space.low, self.action_space.high)
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
-            print(f"BUFFER CLIPPED ACTION: {clipped_actions}")
+            # print(f"BUFFER CLIPPED ACTION: {clipped_actions}")
 
             self.num_timesteps += env.num_envs
 

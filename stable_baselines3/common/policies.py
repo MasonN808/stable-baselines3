@@ -683,7 +683,6 @@ class ActorCriticPolicy(BasePolicy):
         :return: Action distribution
         """
         mean_actions = self.action_net(latent_pi)
-
         if isinstance(self.action_dist, DiagGaussianDistribution):
             return self.action_dist.proba_distribution(mean_actions, self.log_std)
         elif isinstance(self.action_dist, CategoricalDistribution):
@@ -1129,6 +1128,34 @@ class ActorManyCriticPolicy(BasePolicy):
             )
         )
         return data
+    
+    def reset_noise(self, n_envs: int = 1) -> None:
+        """
+        Sample new weights for the exploration matrix.
+
+        :param n_envs:
+        """
+        assert isinstance(self.action_dist, StateDependentNoiseDistribution), "reset_noise() is only available when using gSDE"
+        self.action_dist.sample_weights(self.log_std, batch_size=n_envs)
+
+    def _build_mlp_extractor(self) -> None:
+        """
+        Create the policy and value networks.
+        Part of the layers can be shared.
+        """
+        # Note: If net_arch is None and some features extractor is used,
+        #       net_arch here is an empty list and mlp_extractor does not
+        #       really contain any layers (acts like an identity module).
+        self.mlp_extractor = MlpExtractor(
+            self.features_dim,
+            net_arch=self.net_arch,
+            activation_fn=self.activation_fn,
+            device=self.device,
+        )
+        print("INITIALIZATION-_build_mlp()")
+        for layer in self.mlp_extractor.policy_net:
+            for name, param in layer.named_parameters():
+                print(f"{name} : {param.data}")
 
     def _build(self, lr_schedule: Schedule) -> None:
         """
@@ -1182,34 +1209,6 @@ class ActorManyCriticPolicy(BasePolicy):
         self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
 
         print("INITIALIZATION-_build()")
-        for layer in self.mlp_extractor.policy_net:
-            for name, param in layer.named_parameters():
-                print(f"{name} : {param.data}")
-
-    def reset_noise(self, n_envs: int = 1) -> None:
-        """
-        Sample new weights for the exploration matrix.
-
-        :param n_envs:
-        """
-        assert isinstance(self.action_dist, StateDependentNoiseDistribution), "reset_noise() is only available when using gSDE"
-        self.action_dist.sample_weights(self.log_std, batch_size=n_envs)
-
-    def _build_mlp_extractor(self) -> None:
-        """
-        Create the policy and value networks.
-        Part of the layers can be shared.
-        """
-        # Note: If net_arch is None and some features extractor is used,
-        #       net_arch here is an empty list and mlp_extractor does not
-        #       really contain any layers (acts like an identity module).
-        self.mlp_extractor = MlpExtractor(
-            self.features_dim,
-            net_arch=self.net_arch,
-            activation_fn=self.activation_fn,
-            device=self.device,
-        )
-        print("INITIALIZATION-_build_mlp()")
         for layer in self.mlp_extractor.policy_net:
             for name, param in layer.named_parameters():
                 print(f"{name} : {param.data}")
