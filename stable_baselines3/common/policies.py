@@ -566,7 +566,7 @@ class ActorCriticPolicy(BasePolicy):
             activation_fn=self.activation_fn,
             device=self.device,
         )
-        for layer in self.policy.mlp_extractor.policy_net:
+        for layer in self.mlp_extractor.policy_net:
             for name, param in layer.named_parameters():
                 print(f"{name} : {param.data}")
 
@@ -1198,7 +1198,7 @@ class ActorManyCriticPolicy(BasePolicy):
             activation_fn=self.activation_fn,
             device=self.device,
         )
-        for layer in self.policy.mlp_extractor.policy_net:
+        for layer in self.mlp_extractor.policy_net:
             for name, param in layer.named_parameters():
                 print(f"{name} : {param.data}")
 
