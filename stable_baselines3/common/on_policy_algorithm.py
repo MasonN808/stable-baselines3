@@ -193,6 +193,8 @@ class OnPolicyAlgorithm(BaseAlgorithm):
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
 
+            print(f"BUFFER ACTION: {clipped_actions}")
+            
             self.num_timesteps += env.num_envs
 
             # Give access to local variables
@@ -489,6 +491,7 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                     clipped_actions = np.clip(actions, self.action_space.low, self.action_space.high)
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
+            print(f"BUFFER ACTION: {clipped_actions}")
 
             self.num_timesteps += env.num_envs
 
@@ -563,6 +566,13 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
         callback.on_rollout_end()
 
         return True
+    
+    def train(self) -> None:
+        """
+        Consume current rollout data and update policy parameters.
+        Implemented by individual algorithms.
+        """
+        raise NotImplementedError
 
     def learn(
         self: SelfOnPolicyAlgorithm,
