@@ -177,8 +177,8 @@ class OnPolicyAlgorithm(BaseAlgorithm):
             for layer in self.policy.mlp_extractor.policy_net:
                 for name, param in layer.named_parameters():
                     print(f"{name} : {param.data}")
-            if n_steps == 3:
-                exit()
+            # if n_steps == 3:
+            #     exit()
 
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
@@ -480,8 +480,8 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             for layer in self.policy.mlp_extractor.policy_net:
                 for name, param in layer.named_parameters():
                     print(f"{name} : {param.data}")
-            if n_steps == 3:
-                exit()
+            # if n_steps == 3:
+            #     exit()
 
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
