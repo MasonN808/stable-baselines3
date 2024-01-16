@@ -316,7 +316,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 entropy_losses.append(entropy_loss.item())
 
-                if self.n_costs > 0 or self.lagrange_multiplier:
+                if self.n_costs > 0 and self.lagrange_multiplier:
                     # PPO surrogate loss
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
