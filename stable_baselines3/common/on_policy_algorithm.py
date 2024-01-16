@@ -168,13 +168,6 @@ class OnPolicyAlgorithm(BaseAlgorithm):
         callback.on_rollout_start()
 
         while n_steps < n_rollout_steps:
-            # print("BUFFER:")
-            # # Print the weights for each layer in the Sequential object
-            # for layer in self.policy.mlp_extractor.policy_net:
-            #     for name, param in layer.named_parameters():
-            #         print(f"{name} : {param.data}")
-            # if n_steps == 3:
-            #     exit()
             if self.use_sde and self.sde_sample_freq > 0 and n_steps % self.sde_sample_freq == 0:
                 # Sample a new noise matrix
                 self.policy.reset_noise(env.num_envs)
@@ -206,6 +199,14 @@ class OnPolicyAlgorithm(BaseAlgorithm):
             callback.update_locals(locals())
             if not callback.on_step():
                 return False
+            
+            print("BUFFER:")
+            # Print the weights for each layer in the Sequential object
+            for layer in self.policy.mlp_extractor.policy_net:
+                for name, param in layer.named_parameters():
+                    print(f"{name} : {param.data}")
+            if n_steps == 3:
+                exit()
 
             self._update_info_buffer(infos)
             n_steps += 1
@@ -464,14 +465,6 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
         callback.on_rollout_start()
 
         while n_steps < n_rollout_steps:
-            # print("BUFFER:")
-            # # Print the weights for each layer in the Sequential object
-            # for layer in self.policy.mlp_extractor.policy_net:
-            #     for name, param in layer.named_parameters():
-            #         print(f"{name} : {param.data}")
-
-            # if n_steps == 3:
-            #     exit()
             if self.use_sde and self.sde_sample_freq > 0 and n_steps % self.sde_sample_freq == 0:
                 # Sample a new noise matrix
                 self.policy.reset_noise(env.num_envs)
@@ -505,6 +498,14 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                 return False
 
             self._update_info_buffer(infos)
+
+            print("BUFFER:")
+            # Print the weights for each layer in the Sequential object
+            for layer in self.policy.mlp_extractor.policy_net:
+                for name, param in layer.named_parameters():
+                    print(f"{name} : {param.data}")
+            if n_steps == 3:
+                exit()
             n_steps += 1
 
             if isinstance(self.action_space, spaces.Discrete):
