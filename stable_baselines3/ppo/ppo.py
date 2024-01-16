@@ -180,10 +180,11 @@ class PPO(OnPolicyAlgorithm):
         """
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
+        print("TRAINING:")
         # Print the weights for each layer in the Sequential object
-        # for layer in self.policy.mlp_extractor.policy_net:
-        #     for name, param in layer.named_parameters():
-        #         print(f"{name} : {param.data}")
+        for layer in self.policy.mlp_extractor.policy_net:
+            for name, param in layer.named_parameters():
+                print(f"{name} : {param.data}")
         # Update optimizer learning rate
         self._update_learning_rate(self.policy.optimizer)
         # Compute current clip range
@@ -202,7 +203,6 @@ class PPO(OnPolicyAlgorithm):
             approx_kl_divs = []
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
-                print(rollout_data.actions)
                 actions = rollout_data.actions
                 if isinstance(self.action_space, spaces.Discrete):
                     # Convert discrete action from float to long
