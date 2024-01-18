@@ -256,10 +256,11 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     cost_values_list.append(th.mean(cost_values).item())
                 # Apply feedback control
                 if self.lagrange_multiplier and self.n_costs > 0:
-                    d = th.full(cost_values.size(), self.cost_threshold[0], requires_grad=False) # TODO: make more general later if more costs present
-                    # Cost Threshold
-                    lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
-                    j_c_prev = cost_values
+                    with th.no_grad():
+                        d = th.full(cost_values.size(), self.cost_threshold[0], requires_grad=False) # TODO: make more general later if more costs present
+                        # Cost Threshold
+                        lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
+                        j_c_prev = cost_values
 
                 # Normalize advantage
                 advantages = rollout_data.advantages
