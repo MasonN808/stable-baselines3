@@ -322,12 +322,15 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
                     loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
-                    # print(f"policy_loss: {policy_loss}")
-                    # print(f"entropy_loss: {entropy_loss}")
-                    # print(f"value_loss: {value_loss}")
-                    # print(f"cost_value_loss: {cost_value_loss}")
-                    # print(f"ppo_loss: {ppo_loss}")
-                    # print(f"loss: {loss}")
+
+                    print(f"value_loss: {value_loss}")
+                    print(f"cost_value_loss: {cost_value_loss}")
+                    print(f"loss: {loss}")
+                    
+                    print(f"th.sum(lambdas): {th.sum(lambdas)}")
+                    print(f"lambdas: {lambdas}")
+                    print(f"cost_values: {cost_values}")
+
                 else:
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
