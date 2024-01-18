@@ -180,11 +180,11 @@ class PPO(OnPolicyAlgorithm):
         """
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
-        print("TRAINING:")
-        # Print the weights for each layer in the Sequential object
-        for layer in self.policy.mlp_extractor.policy_net:
-            for name, param in layer.named_parameters():
-                print(f"{name} : {param.data}")
+        # print("TRAINING:")
+        # # Print the weights for each layer in the Sequential object
+        # for layer in self.policy.mlp_extractor.policy_net:
+        #     for name, param in layer.named_parameters():
+        #         print(f"{name} : {param.data}")
         # Update optimizer learning rate
         self._update_learning_rate(self.policy.optimizer)
         # Compute current clip range
@@ -256,10 +256,10 @@ class PPO(OnPolicyAlgorithm):
                 entropy_losses.append(entropy_loss.item())
 
                 loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
-                print(f"policy_loss: {policy_loss}")
-                print(f"entropy_loss: {entropy_loss}")
-                print(f"value_loss: {value_loss}")
-                print(f"loss: {loss}")
+                # print(f"policy_loss: {policy_loss}")
+                # print(f"entropy_loss: {entropy_loss}")
+                # print(f"value_loss: {value_loss}")
+                # print(f"loss: {loss}")
 
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417

@@ -206,10 +206,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         # Switch to train mode (this affects batch norm / dropout)
         self.policy.set_training_mode(True)
         # Print the weights for each layer in the Sequential object
-        print("TRAINING:")
-        for layer in self.policy.mlp_extractor.policy_net:
-            for name, param in layer.named_parameters():
-                print(f"{name} : {param.data}")
+        # print("TRAINING:")
+        # for layer in self.policy.mlp_extractor.policy_net:
+        #     for name, param in layer.named_parameters():
+        #         print(f"{name} : {param.data}")
         # Update optimizer learning rate
         self._update_learning_rate(self.policy.optimizer)
         # Compute current clip range
@@ -322,12 +322,12 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
                     loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
-                    print(f"policy_loss: {policy_loss}")
-                    print(f"entropy_loss: {entropy_loss}")
-                    print(f"value_loss: {value_loss}")
-                    print(f"cost_value_loss: {cost_value_loss}")
-                    print(f"ppo_loss: {ppo_loss}")
-                    print(f"loss: {loss}")
+                    # print(f"policy_loss: {policy_loss}")
+                    # print(f"entropy_loss: {entropy_loss}")
+                    # print(f"value_loss: {value_loss}")
+                    # print(f"cost_value_loss: {cost_value_loss}")
+                    # print(f"ppo_loss: {ppo_loss}")
+                    # print(f"loss: {loss}")
                 else:
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
 
