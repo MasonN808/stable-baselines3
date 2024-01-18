@@ -566,10 +566,10 @@ class ActorCriticPolicy(BasePolicy):
             activation_fn=self.activation_fn,
             device=self.device,
         )
-        print("INITIALIZATION-_build_mlp()")
-        for layer in self.mlp_extractor.policy_net:
-            for name, param in layer.named_parameters():
-                print(f"{name} : {param.data}")
+        # print("INITIALIZATION-_build_mlp()")
+        # for layer in self.mlp_extractor.policy_net:
+        #     for name, param in layer.named_parameters():
+        #         print(f"{name} : {param.data}")
 
     def _build(self, lr_schedule: Schedule) -> None:
         """
@@ -1152,10 +1152,10 @@ class ActorManyCriticPolicy(BasePolicy):
             activation_fn=self.activation_fn,
             device=self.device,
         )
-        print("INITIALIZATION-_build_mlp()")
-        for layer in self.mlp_extractor.policy_net:
-            for name, param in layer.named_parameters():
-                print(f"{name} : {param.data}")
+        # print("INITIALIZATION-_build_mlp()")
+        # for layer in self.mlp_extractor.policy_net:
+        #     for name, param in layer.named_parameters():
+        #         print(f"{name} : {param.data}")
 
     def _build(self, lr_schedule: Schedule) -> None:
         """
