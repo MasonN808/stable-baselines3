@@ -259,7 +259,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     with th.no_grad():
                         d = th.full(cost_values.size(), self.cost_threshold[0], requires_grad=False) # TODO: make more general later if more costs present
                         # Cost Threshold
-                        lambdas = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
+                        lambdas, integral = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
                         j_c_prev = cost_values
 
                 # Normalize advantage
@@ -270,6 +270,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 # ratio between old and new policy, should be one at the first iteration
                 ratio = th.exp(log_prob - rollout_data.old_log_prob)
+                # print(f"ratio: {ratio.mean().item()}")
+                # print(f"advantages: {advantages.mean().item()}")
 
                 # clipped surrogate loss
                 policy_loss_1 = advantages * ratio
@@ -321,15 +323,16 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     # PPO surrogate loss
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
-                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * cost_values))
+                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * cost_values))
+                    # loss = (ppo_loss - th.sum(lambdas * cost_values))
 
-                    print(f"value_loss: {value_loss}")
-                    print(f"cost_value_loss: {cost_value_loss}")
-                    print(f"loss: {loss}")
+                    # print(f"value_loss: {value_loss}")
+                    # print(f"cost_value_loss: {cost_value_loss}")
+                    # print(f"loss: {loss}")
                     
-                    print(f"th.sum(lambdas): {th.sum(lambdas)}")
-                    print(f"lambdas: {lambdas}")
-                    print(f"cost_values: {cost_values}")
+                    # print(f"th.sum(lambdas): {th.sum(lambdas)}")
+                    # print(f"lambdas: {lambdas}")
+                    # print(f"cost_values: {cost_values}")
 
                 else:
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
@@ -393,11 +396,11 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         derivative = th.clamp(j_c-j_c_prev, min=0)
         integral = th.clamp(integral + proportion, min=0)
         lmbda = th.clamp(K_P*proportion + K_I*integral + K_D*derivative, min=0)
-        print(f"proportion: {proportion}")
-        print(f"derivative: {derivative}")
-        print(f"integral: {integral}")
-        print(f"lmbda: {lmbda}")
-        return lmbda.detach()
+        # print(f"proportion: {proportion}")
+        # print(f"derivative: {derivative}")
+        # print(f"integral: {integral}")
+        # print(f"lmbda: {lmbda}")
+        return lmbda.detach(), integral
     
     @staticmethod
     def find_record_episode_statistics_wrapper(env):
