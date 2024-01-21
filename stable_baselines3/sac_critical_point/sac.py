@@ -5,6 +5,8 @@ import torch as th
 from gymnasium import spaces
 import gymnasium as gym
 from torch.nn import functional as F
+import json
+import ast
 
 from stable_baselines3.common.buffers import ReplayBuffer
 from stable_baselines3.common.noise import ActionNoise
@@ -163,23 +165,33 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         # Critical Point params
         self.num_observation_points = num_observation_points
         
-        # TODO: Verify with Saad that this is correct. It seems that it samples from the beginning from the episode as seen in the renders. 
         # Track n observations as critical points
-        # critical_point_obs = []
-        # self.env.reset()
-        # # For critical point evaluation
-        # for _ in range(n_tracked_obs):
-        #     # Get random obs uniformly
-        #     cp_observation = self.env.observation_space.sample()
-        #     # Convert cp_observation to a PyTorch tensor and add an extra dimension
-        #     cp_observation_tensor = th.tensor(cp_observation).unsqueeze(0)
-        #     # Append the new observation tensor
-        #     critical_point_obs.append(cp_observation_tensor)
+        critical_point_obs = []
+        self.env.reset()
 
-        # # Concatenate all observation tensors along dimension 0
-        # critical_point_obs = th.cat(critical_point_obs, dim=0)
+        # For critical point evaluation
+        # Load the dictionary from the file
+        with open('observation_counts_dict.txt', 'r') as file:
+            json_string = file.read()
+            string_key_dict = json.loads(json_string)
 
-        # self.critical_point_obs = critical_point_obs
+        # Convert string keys back to tuples
+        dictionary = {ast.literal_eval(key): value for key, value in string_key_dict.items()}
+
+        for key in dictionary.keys():
+            # Get random obs uniformly
+            # cp_observation = self.env.observation_space.sample()
+
+            # Convert cp_observation to a PyTorch tensor and add an extra dimension
+            cp_observation_tensor = th.tensor(key).unsqueeze(0)
+            # Append the new observation tensor
+            critical_point_obs.append(cp_observation_tensor)
+
+        # Concatenate all observation tensors along dimension 0
+        critical_point_obs = th.cat(critical_point_obs, dim=0)
+
+        self.critical_point_obs = critical_point_obs
+        self.top_critical_values = []
         # Quantized action points
         self.quantized_actions = th.tensor(self.generate_discrete_actions(env, 10), dtype=th.float32)
   
@@ -309,14 +321,22 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             self.actor.optimizer.step()
 
             # Do the max q value calculation here and calculate the critical point
-            # with th.no_grad():
-            #     for idx, obs in enumerate(self.critical_point_obs):
-            #         stacked_obs = th.stack([obs]*self.quantized_actions.size()[0])
-            #         # next_q_values = self.critic(stacked_obs, self.quantized_actions)
-            #         q_values = th.cat(self.critic(stacked_obs, self.quantized_actions), dim=1)
-            #         q_values, _ = th.min(q_values, dim=1, keepdim=True)
-            #         critical_value = th.max(q_values, dim=0)[0] - th.min(q_values, dim=0)[0]
-            #         self.logger.record(f"train/critical_points/{idx}", critical_value)
+            self.top_critical_values = []
+            with th.no_grad():
+                for idx, obs in enumerate(self.critical_point_obs):
+                    stacked_obs = th.stack([obs]*self.quantized_actions.size()[0])
+                    # next_q_values = self.critic(stacked_obs, self.quantized_actions)
+                    q_values = th.cat(self.critic(stacked_obs, self.quantized_actions), dim=1)
+                    q_values, _ = th.min(q_values, dim=1, keepdim=True)
+                    critical_value = th.max(q_values, dim=0)[0] - th.min(q_values, dim=0)[0]
+
+                    # Add to the list and keep it sorted
+                    self.top_critical_values.append((idx, obs, critical_value))
+                    self.top_critical_values.sort(key=lambda x: x[2], reverse=True)  # Sort by critical_value
+                    self.top_critical_values = self.top_critical_values[:10]  # Keep only top 10
+
+                    # Log each critical value
+                    self.logger.record(f"train/critical_points/{idx}-{obs}", critical_value)
 
             # Update target networks
             if gradient_step % self.target_update_interval == 0:
