@@ -11,6 +11,7 @@ import numpy as np
 import torch as th
 from gymnasium import spaces
 from torch import nn
+from stable_baselines3.common import utils
 
 from stable_baselines3.common.distributions import (
     BernoulliDistribution,
@@ -1208,12 +1209,12 @@ class ActorManyCriticPolicy(BasePolicy):
         # Setup optimizer with initial learning rate
         self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
 
-        print("INITIALIZATION-_build()")
-        for layer in self.mlp_extractor.policy_net:
-            for name, param in layer.named_parameters():
-                print(f"{name} : {param.data}")
+        # print("INITIALIZATION-_build()")
+        # for layer in self.mlp_extractor.policy_net:
+        #     for name, param in layer.named_parameters():
+        #         print(f"{name} : {param.data}")
 
-    def forward(self, obs: th.Tensor, deterministic: bool = True) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
+    def forward(self, obs: th.Tensor, deterministic: bool = False) -> Tuple[th.Tensor, th.Tensor, th.Tensor]:
         """
         Forward pass in all the networks (actor and critic)
 
@@ -1232,7 +1233,7 @@ class ActorManyCriticPolicy(BasePolicy):
         # Evaluate the values for the given observations
         values = self.value_net(latent_vf)
         distribution = self._get_action_dist_from_latent(latent_pi)
-        actions = distribution.get_actions(deterministic=deterministic)
+        actions = distribution.get_actions(deterministic=True)
         log_prob = distribution.log_prob(actions)
         actions = actions.reshape((-1, *self.action_space.shape))
         return actions, values, log_prob
