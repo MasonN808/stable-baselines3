@@ -185,7 +185,7 @@ class OnPolicyAlgorithm(BaseAlgorithm):
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
                 # print(f"OBS TENSOR: {obs_tensor}")
                 # print(f"POLICY: {self.policy}")
-                actions, values, log_probs = self.policy(obs_tensor, deterministic=True)
+                actions, values, log_probs = self.policy(obs_tensor, deterministic=False)
             actions = actions.cpu().numpy()
 
             # print(f"BUFFER UNCLIPPED ACTION: {actions}")
@@ -488,7 +488,7 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
                 # print(f"OBS TENSOR: {obs_tensor}")
                 # print(f"POLICY: {self.policy}")
-                actions, values, log_probs = self.policy(obs_tensor, deterministic=True)
+                actions, values, log_probs = self.policy(obs_tensor, deterministic=False)
             actions = actions.cpu().numpy()
             # print(f"BUFFER UNCLIPPED ACTION: {actions}")
             # Rescale and perform action
