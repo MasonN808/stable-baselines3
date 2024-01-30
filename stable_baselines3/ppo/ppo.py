@@ -161,7 +161,7 @@ class PPO(OnPolicyAlgorithm):
         self.target_kl = target_kl
 
         if _init_setup_model:
-            self._setup_model()
+            self._setup_model()        
 
     def _setup_model(self) -> None:
         super()._setup_model()
@@ -200,6 +200,15 @@ class PPO(OnPolicyAlgorithm):
         continue_training = True
         # train for n_epochs epochs
         for epoch in range(self.n_epochs):
+            import inspect
+            # Write the state to a text file
+            with open('pytorch_rng_state_ppo.txt', 'a') as file:
+                # file name
+                file.write(f"File: {__file__}\n")
+                # current line number
+                file.write(f"Line: {inspect.currentframe().f_lineno}\n")
+                file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
+
             approx_kl_divs = []
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
