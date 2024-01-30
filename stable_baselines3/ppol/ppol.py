@@ -227,6 +227,15 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
         # train for n_epochs epochs
         for epoch in range(self.n_epochs):
+            import inspect
+            # Write the state to a text file
+            with open('pytorch_rng_state_ppol.txt', 'a') as file:
+                # file name
+                file.write(f"File: {__file__}\n")
+                # current line number
+                file.write(f"Line: {inspect.currentframe().f_lineno}\n")
+                file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
+
             approx_kl_divs = []
             integral = th.zeros(1, self.batch_size, requires_grad=False)
             j_c_prev = th.zeros(1, self.batch_size, requires_grad=False)
@@ -422,7 +431,6 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         reset_num_timesteps: bool = True,
         progress_bar: bool = False,
     ) -> SelfPPOL:
-        
         # Call the original learn method
         result = super().learn(
             total_timesteps=total_timesteps,
