@@ -71,9 +71,9 @@ class BaseModel(nn.Module):
         normalize_images: bool = True,
         optimizer_class: Type[th.optim.Optimizer] = th.optim.Adam,
         optimizer_kwargs: Optional[Dict[str, Any]] = None,
-    ):
+    ): 
         super().__init__()
-
+        
         if optimizer_kwargs is None:
             optimizer_kwargs = {}
 
@@ -579,6 +579,15 @@ class ActorCriticPolicy(BasePolicy):
         :param lr_schedule: Learning rate schedule
             lr_schedule(1) is the initial learning rate
         """
+        import inspect
+        # Write the state to a text file
+        with open('pytorch_rng_state_ppo.txt', 'a') as file:
+            # file name
+            file.write(f"File: {__file__}\n")
+            # current line number
+            file.write(f"Line: {inspect.currentframe().f_lineno}\n")
+            file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
+
         self._build_mlp_extractor()
 
         latent_dim_pi = self.mlp_extractor.latent_dim_pi
@@ -596,7 +605,20 @@ class ActorCriticPolicy(BasePolicy):
         else:
             raise NotImplementedError(f"Unsupported distribution '{self.action_dist}'.")
 
-        self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1)
+        self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1) # THIS IS CHANGING RNG
+        # self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1) # THIS IS CHANGING RNG
+        for _ in range(self.mlp_extractor.latent_dim_vf + 1): # TODO: Finish this
+            th.rand(1)
+
+        import inspect
+        # Write the state to a text file
+        with open('pytorch_rng_state_ppo.txt', 'a') as file:
+            # file name
+            file.write(f"File: {__file__}\n")
+            # current line number
+            file.write(f"Line: {inspect.currentframe().f_lineno}\n")
+            file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
+
         # Init weights: use orthogonal initialization
         # with small initial weight for the output
         if self.ortho_init:
@@ -622,7 +644,6 @@ class ActorCriticPolicy(BasePolicy):
 
         # Setup optimizer with initial learning rate
         self.optimizer = self.optimizer_class(self.parameters(), lr=lr_schedule(1), **self.optimizer_kwargs)
-
         # print("INITIALIZATION-_build()")
         # for layer in self.mlp_extractor.policy_net:
         #     for name, param in layer.named_parameters():
@@ -638,6 +659,7 @@ class ActorCriticPolicy(BasePolicy):
         """
         # Preprocess the observation if needed
         features = self.extract_features(obs)
+        # print(f"features of obs: {features}")
         if self.share_features_extractor:
             latent_pi, latent_vf = self.mlp_extractor(features)
         else:
@@ -645,6 +667,7 @@ class ActorCriticPolicy(BasePolicy):
             latent_pi = self.mlp_extractor.forward_actor(pi_features)
             latent_vf = self.mlp_extractor.forward_critic(vf_features)
         # Evaluate the values for the given observations
+        # print(f"latent_pi: {latent_pi}")
         values = self.value_net(latent_vf)
         distribution = self._get_action_dist_from_latent(latent_pi)
         actions = distribution.get_actions(deterministic=deterministic)
@@ -1102,8 +1125,7 @@ class ActorManyCriticPolicy(BasePolicy):
 
         # Action distribution
         self.action_dist = make_proba_distribution(action_space, use_sde=use_sde, dist_kwargs=dist_kwargs)
-
-        self._build(lr_schedule)
+        self._build(lr_schedule) # THIS IS IT
 
     def _get_constructor_parameters(self) -> Dict[str, Any]:
         data = super()._get_constructor_parameters()
@@ -1165,6 +1187,15 @@ class ActorManyCriticPolicy(BasePolicy):
         :param lr_schedule: Learning rate schedule
             lr_schedule(1) is the initial learning rate
         """
+        import inspect
+        # Write the state to a text file
+        with open('pytorch_rng_state_ppol.txt', 'a') as file:
+            # file name
+            file.write(f"File: {__file__}\n")
+            # current line number
+            file.write(f"Line: {inspect.currentframe().f_lineno}\n")
+            file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
+
         self._build_mlp_extractor()
 
         latent_dim_pi = self.mlp_extractor.latent_dim_pi
@@ -1183,6 +1214,16 @@ class ActorManyCriticPolicy(BasePolicy):
             raise NotImplementedError(f"Unsupported distribution '{self.action_dist}'.")
 
         self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1 + self.n_costs)
+
+        import inspect
+        # Write the state to a text file
+        with open('pytorch_rng_state_ppol.txt', 'a') as file:
+            # file name
+            file.write(f"File: {__file__}\n")
+            # current line number
+            file.write(f"Line: {inspect.currentframe().f_lineno}\n")
+            file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
+
         # Init weights: use orthogonal initialization
         # with small initial weight for the output
         if self.ortho_init:
@@ -1224,6 +1265,7 @@ class ActorManyCriticPolicy(BasePolicy):
         """
         # Preprocess the observation if needed
         features = self.extract_features(obs)
+        # print(f"features of obs: {features}")
         if self.share_features_extractor:
             latent_pi, latent_vf = self.mlp_extractor(features)
         else:
@@ -1231,6 +1273,7 @@ class ActorManyCriticPolicy(BasePolicy):
             latent_pi = self.mlp_extractor.forward_actor(pi_features)
             latent_vf = self.mlp_extractor.forward_critic(vf_features)
         # Evaluate the values for the given observations
+        # print(f"latent_pi: {latent_pi}")
         values = self.value_net(latent_vf)
         distribution = self._get_action_dist_from_latent(latent_pi)
         actions = distribution.get_actions(deterministic=deterministic)
