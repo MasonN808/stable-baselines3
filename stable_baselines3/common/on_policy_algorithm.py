@@ -246,8 +246,10 @@ class OnPolicyAlgorithm(BaseAlgorithm):
             self._last_episode_starts = dones
 
         with th.no_grad():
+            print(f"new_obs: {new_obs}")
             # Compute value for the last timestep
             values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))  # type: ignore[arg-type]
+            print(f"values: {values}")
 
         rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
 
@@ -561,12 +563,27 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             self._last_episode_starts = dones
 
         with th.no_grad():
+            # import inspect
+            # # Write the state to a text file
+            # with open("PPOL_New/logs/NoMultipiler/rng_logger.txt", 'a') as file:
+            #     # file name
+            #     file.write(f"File: {__file__}\n")
+            #     # current line number
+            #     file.write(f"Line: {inspect.currentframe().f_lineno}\n")
+            #     file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
+            # TODO: values produces different values with same tensor
             # Compute value for the last timestep
+            print(f"new_obs: {new_obs}")
             values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))  # type: ignore[arg-type]
+            # Parse values from critic network
+            values = values.flatten()
+            last_values = values[0]
+            print(f"values: {last_values}")
+            last_costs = values[1:]
 
-        rollout_buffer.compute_returns_and_advantage(last_values=values_rewards, dones=dones)
+        rollout_buffer.compute_returns_and_advantage(last_values=last_values, dones=dones)
         if values_costs.numel() != 0:
-            rollout_buffer.compute_returns_and_advantage_costs(last_values_costs=values_costs, dones=dones)
+            rollout_buffer.compute_returns_and_advantage_costs(last_values_costs=last_costs, dones=dones)
 
         callback.update_locals(locals())
 
