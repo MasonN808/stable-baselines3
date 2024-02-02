@@ -98,6 +98,7 @@ class PPO(OnPolicyAlgorithm):
         policy_kwargs: Optional[Dict[str, Any]] = None,
         verbose: int = 0,
         seed: Optional[int] = None,
+        rng_logger_path: str = None,
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
     ):
@@ -160,6 +161,8 @@ class PPO(OnPolicyAlgorithm):
         self.normalize_advantage = normalize_advantage
         self.target_kl = target_kl
 
+        self.rng_logger_path = rng_logger_path
+
         if _init_setup_model:
             self._setup_model()        
 
@@ -202,12 +205,12 @@ class PPO(OnPolicyAlgorithm):
         for epoch in range(self.n_epochs):
             import inspect
             # Write the state to a text file
-            with open('pytorch_rng_state_ppo.txt', 'a') as file:
-                # file name
-                file.write(f"File: {__file__}\n")
-                # current line number
-                file.write(f"Line: {inspect.currentframe().f_lineno}\n")
-                file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
+            # with open(self.rng_logger_path, 'a') as file:
+            #     # file name
+            #     file.write(f"File: {__file__}\n")
+            #     # current line number
+            #     file.write(f"Line: {inspect.currentframe().f_lineno}\n")
+            #     file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
 
             approx_kl_divs = []
             # Do a complete pass on the rollout buffer
@@ -231,6 +234,12 @@ class PPO(OnPolicyAlgorithm):
 
                 # ratio between old and new policy, should be one at the first iteration
                 ratio = th.exp(log_prob - rollout_data.old_log_prob)
+
+                # print(f"log_prob: {ratio.mean().item()}")
+                # print(f"ratio: {ratio.mean().item()}")
+                # with open("advantages_ppo.txt", "a") as file:
+                #     file.write(f"{advantages}\n")
+
 
                 # clipped surrogate loss
                 policy_loss_1 = advantages * ratio
@@ -264,11 +273,21 @@ class PPO(OnPolicyAlgorithm):
 
                 entropy_losses.append(entropy_loss.item())
 
+
+                # with open(self.rng_logger_path, 'a') as file:
+                #     # file name
+                #     file.write(f"File: {__file__}\n")
+                #     # current line number
+                #     file.write(f"Line: {inspect.currentframe().f_lineno}\n")
+
+                #     file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
+
                 loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
                 # print(f"policy_loss: {policy_loss}")
                 # print(f"entropy_loss: {entropy_loss}")
                 # print(f"value_loss: {value_loss}")
                 # print(f"loss: {loss}")
+                # exit()
 
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
