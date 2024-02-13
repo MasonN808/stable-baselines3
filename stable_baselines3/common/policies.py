@@ -651,10 +651,10 @@ class ActorCriticPolicy(BasePolicy):
         # Evaluate the values for the given observations
 
         values = self.value_net(latent_vf)
-        with open("weights_ppo.txt", "a") as file:
-            file.write(f"value net weight: {self.value_net.weight}")
-            file.write(f"value net bias: {self.value_net.bias}")
-            file.write(f"values: {values}")
+        # with open("weights_ppo.txt", "a") as file:
+        #     file.write(f"value net weight: {self.value_net.weight}")
+        #     file.write(f"value net bias: {self.value_net.bias}")
+        #     file.write(f"values: {values}")
         distribution = self._get_action_dist_from_latent(latent_pi)
         actions = distribution.get_actions(deterministic=deterministic)
         log_prob = distribution.log_prob(actions)
@@ -1238,10 +1238,10 @@ class ActorManyCriticPolicy(BasePolicy):
         # print(f"latent_pi: {latent_pi}")
 
         values = self.value_net(latent_vf)
-        with open("weights_ppol.txt", "a") as file:
-            file.write(f"value net weight: {self.value_net.weight}")
-            file.write(f"value net bias: {self.value_net.bias}")
-            file.write(f"values: {values}")
+        # with open("weights_ppol.txt", "a") as file:
+        #     file.write(f"value net weight: {self.value_net.weight}")
+        #     file.write(f"value net bias: {self.value_net.bias}")
+        #     file.write(f"values: {values}")
 
         distribution = self._get_action_dist_from_latent(latent_pi)
         actions = distribution.get_actions(deterministic=deterministic)
