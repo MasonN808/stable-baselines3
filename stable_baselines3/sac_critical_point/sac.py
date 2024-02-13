@@ -327,6 +327,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     stacked_obs = th.stack([obs]*self.quantized_actions.size()[0])
                     # next_q_values = self.critic(stacked_obs, self.quantized_actions)
                     q_values = th.cat(self.critic(stacked_obs, self.quantized_actions), dim=1)
+                    # Do a min for double q
                     q_values, _ = th.min(q_values, dim=1, keepdim=True)
                     critical_value = th.max(q_values, dim=0)[0] - th.min(q_values, dim=0)[0]
 
