@@ -573,13 +573,13 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             #     file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
             # TODO: values produces different values with same tensor
             # Compute value for the last timestep
-            print(f"new_obs: {new_obs}")
+            # print(f"new_obs: {new_obs}")
             values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))  # type: ignore[arg-type]
             # Parse values from critic network
             values = values.flatten()
-            last_values = values[0]
-            print(f"values: {last_values}")
-            last_costs = values[1:]
+            last_values = values[0:self.n_envs]
+            # print(f"values: {last_values}")
+            last_costs = values[self.n_envs:]
 
         rollout_buffer.compute_returns_and_advantage(last_values=last_values, dones=dones)
         if values_costs.numel() != 0:
