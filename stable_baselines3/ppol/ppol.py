@@ -419,10 +419,6 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         derivative = th.clamp(j_c-j_c_prev, min=0)
         integral = th.clamp(integral + proportion, min=0)
         lmbda = th.clamp(K_P*proportion + K_I*integral + K_D*derivative, min=0)
-        # print(f"proportion: {proportion}")
-        # print(f"derivative: {derivative}")
-        # print(f"integral: {integral}")
-        # print(f"lmbda: {lmbda}")
         return lmbda.detach(), integral
     
     @staticmethod
