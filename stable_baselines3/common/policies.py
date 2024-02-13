@@ -2,6 +2,7 @@
 
 import collections
 import copy
+import inspect
 import warnings
 from abc import ABC, abstractmethod
 from functools import partial
@@ -332,6 +333,7 @@ class BasePolicy(BaseModel, ABC):
         state: Optional[Tuple[np.ndarray, ...]] = None,
         episode_start: Optional[np.ndarray] = None,
         deterministic: bool = False,
+        q_value_ind: Optional[str] = None,
     ) -> Tuple[np.ndarray, Optional[Tuple[np.ndarray, ...]]]:
         """
         Get the policy action from an observation (and optional hidden state).
@@ -363,7 +365,7 @@ class BasePolicy(BaseModel, ABC):
         obs_tensor, vectorized_env = self.obs_to_tensor(observation)
 
         with th.no_grad():
-            actions = self._predict(obs_tensor, deterministic=deterministic)
+            actions = self._predict(obs_tensor, deterministic=deterministic, q_value_ind=q_value_ind)
         # Convert to numpy, and reshape to the original action shape
         actions = actions.cpu().numpy().reshape((-1, *self.action_space.shape))  # type: ignore[misc]
 
