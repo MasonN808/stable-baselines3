@@ -1,5 +1,6 @@
 """Abstract base classes for RL algorithms."""
 
+import inspect
 import io
 import pathlib
 import time
@@ -536,6 +537,7 @@ class BaseAlgorithm(ABC):
         state: Optional[Tuple[np.ndarray, ...]] = None,
         episode_start: Optional[np.ndarray] = None,
         deterministic: bool = False,
+        q_value_ind: Optional[str] = None,
     ) -> Tuple[np.ndarray, Optional[Tuple[np.ndarray, ...]]]:
         """
         Get the policy action from an observation (and optional hidden state).
@@ -550,7 +552,7 @@ class BaseAlgorithm(ABC):
         :return: the model's action and the next hidden state
             (used in recurrent policies)
         """
-        return self.policy.predict(observation, state, episode_start, deterministic)
+        return self.policy.predict(observation, state, episode_start, deterministic, q_value_ind=q_value_ind)
 
     def set_random_seed(self, seed: Optional[int] = None) -> None:
         """
