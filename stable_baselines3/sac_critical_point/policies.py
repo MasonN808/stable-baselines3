@@ -1,8 +1,11 @@
+import inspect
 from typing import Any, Dict, List, Optional, Tuple, Type, Union
+import numpy as np
 
 import torch as th
 from gymnasium import spaces
 from torch import nn
+import gymnasium
 
 from stable_baselines3.common.distributions import SquashedDiagGaussianDistribution, StateDependentNoiseDistribution
 from stable_baselines3.common.policies import BasePolicy, ContinuousCritic
@@ -277,6 +280,9 @@ class SACPolicy(BasePolicy):
 
         self._build(lr_schedule)
 
+        # Quantized action points
+        self.quantized_actions = th.tensor(self.generate_discrete_actions(action_space, 10), dtype=th.float32)
+
     def _build(self, lr_schedule: Schedule) -> None:
         self.actor = self.make_actor()
         self.actor.optimizer = self.optimizer_class(
@@ -349,8 +355,28 @@ class SACPolicy(BasePolicy):
     def forward(self, obs: PyTorchObs, deterministic: bool = False) -> th.Tensor:
         return self._predict(obs, deterministic=deterministic)
 
-    def _predict(self, observation: PyTorchObs, deterministic: bool = False) -> th.Tensor:
-        return self.actor(observation, deterministic)
+    def _predict(self, observation: PyTorchObs, deterministic: bool = False, q_value_ind: str = None) -> th.Tensor:
+        #TODO: q_value_ind later
+        if q_value_ind:
+            stacked_obs = th.stack([observation]*self.quantized_actions.size()[0])
+            q_values = th.cat(self.critic(stacked_obs, self.quantized_actions), dim=1)
+            q_values, _ = th.min(q_values, dim=1, keepdim=True)
+            # Track both action indices and their associated Q-values
+            if q_value_ind == "max":
+                max_q_value, max_index = th.max(q_values, dim=0)
+                selected_q_value = max_q_value.item()  # Convert to Python scalar
+                selected_action_index = max_index.item()  # Convert to Python scalar
+            else:
+                min_q_value, min_index = th.min(q_values, dim=0)
+                selected_q_value = min_q_value.item()  # Convert to Python scalar
+                selected_action_index = min_index.item()  # Convert to Python scalar
+
+            # Assuming self.quantized_actions are direct actions or you have a way to map indices to actions
+            # If they are indices or you need to map them, do so here
+            selected_action = self.quantized_actions[selected_action_index]
+            return selected_action
+        else:
+            return self.actor(observation, deterministic)
 
     def set_training_mode(self, mode: bool) -> None:
         """
@@ -363,6 +389,31 @@ class SACPolicy(BasePolicy):
         self.actor.set_training_mode(mode)
         self.critic.set_training_mode(mode)
         self.training = mode
+
+    @staticmethod
+    def generate_discrete_actions(action_space, intervals_per_dimension):
+        """
+        Generates discrete actions for a given Gym environment with a continuous action space.
+        
+        :param env: The Gym environment
+        :param intervals_per_dimension: How many intervals each dimension should be split into
+        :return: A list of discrete actions
+        """
+        # Ensure the environment has a continuous action space
+        if not isinstance(action_space, gymnasium.spaces.Box):
+            raise ValueError("Environment does not have a continuous action space")
+
+        # Get the low and high action bounds
+        action_low = action_space.low
+        action_high = action_space.high
+
+        print(action_low, action_high)
+
+        # Generate a grid of actions
+        action_ranges = [np.linspace(low, high, intervals_per_dimension) for low, high in zip(action_low, action_high)]
+        action_grid = np.array(np.meshgrid(*action_ranges)).T.reshape(-1, len(action_low))
+
+        return action_grid
 
 
 MlpPolicy = SACPolicy
