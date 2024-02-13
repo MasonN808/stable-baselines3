@@ -246,10 +246,10 @@ class OnPolicyAlgorithm(BaseAlgorithm):
             self._last_episode_starts = dones
 
         with th.no_grad():
-            print(f"new_obs: {new_obs}")
+            # print(f"new_obs: {new_obs}")
             # Compute value for the last timestep
             values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))  # type: ignore[arg-type]
-            print(f"values: {values}")
+            # print(f"values: {values}")
 
         rollout_buffer.compute_returns_and_advantage(last_values=values, dones=dones)
 
@@ -546,8 +546,8 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
 
             # Parse values from critic network
             values = values.flatten()
-            values_rewards = values[0]
-            values_costs = values[1:]
+            values_rewards = values[0:self.n_envs]
+            values_costs = values[self.n_envs:]
 
             rollout_buffer.add(
                 self._last_obs,  # type: ignore[arg-type]
