@@ -101,7 +101,8 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         batch_size: int = 256,
         tau: float = 0.005,
         gamma: float = 0.99,
-        n_tracked_obs: int = 10,
+        min_observation_count: int = 2000,
+        intervals_per_dim: int = 10,
         train_freq: Union[int, Tuple[int, str]] = 1,
         gradient_steps: int = 1,
         action_noise: Optional[ActionNoise] = None,
@@ -164,7 +165,9 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
 
         # Critical Point params
         self.num_observation_points = num_observation_points
-        
+        self.min_observation_count = min_observation_count
+        self.intervals_per_dim = intervals_per_dim
+
         # Track n observations as critical points
         critical_point_obs = []
         self.env.reset()
@@ -179,9 +182,6 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         dictionary = {ast.literal_eval(key): value for key, value in string_key_dict.items()}
 
         for key in dictionary.keys():
-            # Get random obs uniformly
-            # cp_observation = self.env.observation_space.sample()
-
             # Convert cp_observation to a PyTorch tensor and add an extra dimension
             cp_observation_tensor = th.tensor(key).unsqueeze(0)
             # Append the new observation tensor
@@ -193,7 +193,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         self.critical_point_obs = critical_point_obs
         self.top_critical_values = []
         # Quantized action points
-        self.quantized_actions = th.tensor(self.generate_discrete_actions(env, 10), dtype=th.float32)
+        self.quantized_actions = th.tensor(self.generate_discrete_actions(env, self.intervals_per_dim), dtype=th.float32)
   
     def _setup_model(self) -> None:
         super()._setup_model()
@@ -320,14 +320,18 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             actor_loss.backward()
             self.actor.optimizer.step()
 
+            # Extract the observations from the callback dictionary
+            pruned_observation_counts = {key: value for key, value in self.callback.observation_counts.items() if value >= self.min_observation_count}
+
             # Do the max q value calculation here and calculate the critical point
             self.top_critical_values = []
             with th.no_grad():
-                for idx, obs in enumerate(self.critical_point_obs):
+                for idx, obs in enumerate(pruned_observation_counts.keys()):
+                    # Convert obs to tensor
+                    obs = th.tensor(obs).unsqueeze(0)
                     stacked_obs = th.stack([obs]*self.quantized_actions.size()[0])
-                    # next_q_values = self.critic(stacked_obs, self.quantized_actions)
                     q_values = th.cat(self.critic(stacked_obs, self.quantized_actions), dim=1)
-                    # Do a min for double q
+                    # Do a min for double q trick
                     q_values, _ = th.min(q_values, dim=1, keepdim=True)
                     critical_value = th.max(q_values, dim=0)[0] - th.min(q_values, dim=0)[0]
 
@@ -364,6 +368,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         reset_num_timesteps: bool = True,
         progress_bar: bool = False,
     ) -> SelfSAC_Critical_Point:
+        self.callback = callback
         return super().learn(
             total_timesteps=total_timesteps,
             callback=callback,
@@ -402,10 +407,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         action_low = env.action_space.low
         action_high = env.action_space.high
 
-        print(action_low, action_high)
-
         # Generate a grid of actions
         action_ranges = [np.linspace(low, high, intervals_per_dimension) for low, high in zip(action_low, action_high)]
         action_grid = np.array(np.meshgrid(*action_ranges)).T.reshape(-1, len(action_low))
-
         return action_grid
