@@ -341,7 +341,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     self.top_critical_values = self.top_critical_values[:10]  # Keep only top 10
 
                     # Log each critical value
-                    self.logger.record(f"train/critical_points/{idx}-{obs}", critical_value)
+                    self.logger.record(f"train/critical_points/{obs}", critical_value)
 
             # Update target networks
             if gradient_step % self.target_update_interval == 0:
