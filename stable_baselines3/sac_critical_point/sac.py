@@ -339,7 +339,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     self.top_critical_values.append((idx, obs, critical_value))
                     self.top_critical_values.sort(key=lambda x: x[2], reverse=True)  # Sort by critical_value
                     self.top_critical_values = self.top_critical_values[:10]  # Keep only top 10
-
+                    print(obs[0])
                     # Log each critical value
                     self.logger.record(f"train/critical_points/{obs[0]}", critical_value)
 
