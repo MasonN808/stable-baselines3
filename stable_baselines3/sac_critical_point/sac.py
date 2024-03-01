@@ -327,8 +327,6 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             self.top_critical_values = []
             with th.no_grad():
                 for idx, obs in enumerate(pruned_observation_counts.keys()):
-                    # Flatten the embedded list
-                    obs = obs.pop()
                     # Convert obs to tensor
                     obs = th.tensor(obs).unsqueeze(0)
                     stacked_obs = th.stack([obs]*self.quantized_actions.size()[0])
@@ -343,7 +341,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     self.top_critical_values = self.top_critical_values[:10]  # Keep only top 10
 
                     # Log each critical value
-                    self.logger.record(f"train/critical_points/{obs}", critical_value)
+                    self.logger.record(f"train/critical_points/{obs[0]}", critical_value)
 
             # Update target networks
             if gradient_step % self.target_update_interval == 0:
