@@ -339,9 +339,10 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     self.top_critical_values.append((idx, obs, critical_value))
                     self.top_critical_values.sort(key=lambda x: x[2], reverse=True)  # Sort by critical_value
                     self.top_critical_values = self.top_critical_values[:10]  # Keep only top 10
-                    print(obs[0])
+
+                    serialized_obs = str(obs[0].cpu().numpy())
                     # Log each critical value
-                    self.logger.record(f"train/critical_points/{obs[0]}", critical_value)
+                    self.logger.record(f"train/critical_points/{serialized_obs}", critical_value)
 
             # Update target networks
             if gradient_step % self.target_update_interval == 0:
