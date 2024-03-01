@@ -327,6 +327,8 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             self.top_critical_values = []
             with th.no_grad():
                 for idx, obs in enumerate(pruned_observation_counts.keys()):
+                    # Flatten the embedded list
+                    obs = obs.pop()
                     # Convert obs to tensor
                     obs = th.tensor(obs).unsqueeze(0)
                     stacked_obs = th.stack([obs]*self.quantized_actions.size()[0])
