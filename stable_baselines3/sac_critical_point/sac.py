@@ -193,7 +193,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         # self.critical_point_obs = critical_point_obs
         self.top_critical_values = []
         # Quantized action points
-        self.quantized_actions = th.tensor(self.generate_discrete_actions(env, self.intervals_per_dim), dtype=th.float32, device=device)
+        self.quantized_actions = th.tensor(self.generate_discrete_actions(env, self.intervals_per_dim), dtype=th.float32, device=self.device)
   
     def _setup_model(self) -> None:
         super()._setup_model()
