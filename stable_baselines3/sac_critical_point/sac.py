@@ -174,23 +174,23 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
 
         # For critical point evaluation
         # Load the dictionary from the file
-        with open('observation_counts_dict.txt', 'r') as file:
-            json_string = file.read()
-            string_key_dict = json.loads(json_string)
+        # with open('observation_counts_dict.txt', 'r') as file:
+        #     json_string = file.read()
+        #     string_key_dict = json.loads(json_string)
 
         # Convert string keys back to tuples
-        dictionary = {ast.literal_eval(key): value for key, value in string_key_dict.items()}
+        # dictionary = {ast.literal_eval(key): value for key, value in string_key_dict.items()}
 
-        for key in dictionary.keys():
-            # Convert cp_observation to a PyTorch tensor and add an extra dimension
-            cp_observation_tensor = th.tensor(key).unsqueeze(0)
-            # Append the new observation tensor
-            critical_point_obs.append(cp_observation_tensor)
+        # for key in dictionary.keys():
+        #     # Convert cp_observation to a PyTorch tensor and add an extra dimension
+        #     cp_observation_tensor = th.tensor(key).unsqueeze(0)
+        #     # Append the new observation tensor
+        #     critical_point_obs.append(cp_observation_tensor)
 
-        # Concatenate all observation tensors along dimension 0
-        critical_point_obs = th.cat(critical_point_obs, dim=0)
+        # # Concatenate all observation tensors along dimension 0
+        # critical_point_obs = th.cat(critical_point_obs, dim=0)
 
-        self.critical_point_obs = critical_point_obs
+        # self.critical_point_obs = critical_point_obs
         self.top_critical_values = []
         # Quantized action points
         self.quantized_actions = th.tensor(self.generate_discrete_actions(env, self.intervals_per_dim), dtype=th.float32)
