@@ -193,7 +193,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         # self.critical_point_obs = critical_point_obs
         self.top_critical_values = []
         # Quantized action points
-        self.quantized_actions = th.tensor(self.generate_discrete_actions(env, self.intervals_per_dim), dtype=th.float32)
+        self.quantized_actions = th.tensor(self.generate_discrete_actions(env, self.intervals_per_dim), dtype=th.float32, device=device)
   
     def _setup_model(self) -> None:
         super()._setup_model()
@@ -328,7 +328,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             with th.no_grad():
                 for idx, obs in enumerate(pruned_observation_counts.keys()):
                     # Convert obs to tensor
-                    obs = th.tensor(obs).unsqueeze(0)
+                    obs = th.tensor(obs, device=self.device).unsqueeze(0)
                     stacked_obs = th.stack([obs]*self.quantized_actions.size()[0])
                     q_values = th.cat(self.critic(stacked_obs, self.quantized_actions), dim=1)
                     # Do a min for double q trick
