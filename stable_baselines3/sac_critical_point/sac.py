@@ -2,6 +2,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Tuple, Type, TypeVar, Un
 
 import numpy as np
 import torch as th
+import wandb
 from gymnasium import spaces
 import gymnasium as gym
 from torch.nn import functional as F
@@ -323,29 +324,42 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             # Extract the observations from the callback dictionary
             pruned_observation_counts = {key: value for key, value in self.callback.observation_counts.items() if value >= self.min_observation_count}
 
-            # Do the max q value calculation here and calculate the critical point
-            self.top_critical_values = []
+            # Convert observation keys to a tensor
+            obs_keys = list(pruned_observation_counts.keys())
+            obs_tensor = th.tensor(obs_keys, device=self.device)  # Shape: [num_obs, obs_dim]
+
+            # Expand quantized actions to match the number of observations
+            quantized_actions_expanded = self.quantized_actions.unsqueeze(1).expand(-1, len(obs_keys), -1)
+
+            # Reshape for batch processing
+            obs_tensor_expanded = obs_tensor.unsqueeze(1).expand(-1, self.quantized_actions.size()[0], -1)
+            stacked_obs_actions = th.cat((obs_tensor_expanded, quantized_actions_expanded), dim=2)
+
+            # Compute Q values in a batch
             with th.no_grad():
-                for idx, obs in enumerate(pruned_observation_counts.keys()):
-                    # Convert obs to tensor
-                    obs = th.tensor(obs, device=self.device).unsqueeze(0)
-                    stacked_obs = th.stack([obs]*self.quantized_actions.size()[0])
-                    q_values = th.cat(self.critic(stacked_obs, self.quantized_actions), dim=1)
-                    # Do a min for double q trick
-                    q_values, _ = th.min(q_values, dim=1, keepdim=True)
-                    critical_value = th.max(q_values, dim=0)[0] - th.min(q_values, dim=0)[0]
+                q_values = th.cat(self.critic(stacked_obs_actions), dim=2)  # Adjust dimensions as necessary
+                # Do a min for double-Q trick
+                q_values, _ = th.min(q_values, dim=2, keepdim=True)
+                critical_values = th.max(q_values, dim=1)[0] - th.min(q_values, dim=1)[0]
 
-                    # Add to the list and keep it sorted
-                    if self.num_timesteps == self.total_timesteps:
-                        self.top_critical_values.append((idx, obs, critical_value))
+            # Log top 10 critical values at the end of each epoch
+            if self.num_timesteps == self.total_timesteps:
+                # Get the top 10 critical values and their indices
+                top_values, top_indices = th.topk(critical_values, 10, largest=True, sorted=True)
+                top_observations = obs_tensor[top_indices]
+                top_values = top_values
 
-                    serialized_obs = str(obs[0].cpu().numpy())
-                    # Log each critical value
-                    self.logger.record(f"train/critical_points/{serialized_obs}", critical_value)
+                # Log the top 10 critical values and their observations
+                for obs, value in zip(top_observations, top_values):
+                    # Ensure obs is in a loggable format
+                    serialized_obs = str(obs.cpu().numpy()) if not isinstance(obs, str) else obs.cpu().numpy()
+                    wandb.log({"Top Observation": serialized_obs, "Top Critical Value": value.item()})
 
-                if self.num_timesteps == self.total_timesteps:
-                    self.top_critical_values.sort(key=lambda x: x[2], reverse=True)  # Sort by critical_value
-                    self.top_critical_values = self.top_critical_values[:10]  # Keep only top 10
+            # Log critical values
+            if self.num_timesteps % 1 == 0:
+                for idx, critical_value in enumerate(critical_values):
+                    serialized_obs = str(obs_tensor[idx].cpu().numpy()) if not isinstance(obs, str) else obs_tensor[idx].cpu().numpy()
+                    self.logger.record(f"train/critical_points/{serialized_obs}", critical_value.item())
 
             # Update target networks
             if gradient_step % self.target_update_interval == 0:
