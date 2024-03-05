@@ -299,7 +299,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             self.actor.optimizer.step()
 
             #TODO: maybe dont do this after every gradient step (every 500?)
-            if self.num_timesteps % 2000:
+            if self.num_timesteps % 2000 == 0:
                 # Extract the observations from the callback dictionary
                 pruned_observation_counts = {key: value for key, value in self.callback.observation_counts.items() if value >= self.min_observation_count}
 
