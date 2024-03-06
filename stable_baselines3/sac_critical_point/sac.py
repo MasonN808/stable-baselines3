@@ -328,7 +328,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     # Log top 10 values (critical values)
                     critical_values = th.tensor(critical_values, device=self.device)
                     # Get the top 10 critical values and their indices
-                    top_values, top_indices = th.topk(critical_values, 2, largest=True, sorted=True)
+                    top_values, top_indices = th.topk(critical_values, 100, largest=True, sorted=True)
                     top_observations = obs_tensor[top_indices]
 
                     obs_value_dict = {}
