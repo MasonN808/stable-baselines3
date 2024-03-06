@@ -120,6 +120,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         tensorboard_log: Optional[str] = None,
         policy_kwargs: Optional[Dict[str, Any]] = None,
         verbose: int = 0,
+        run_id: Optional[str] = None,
         seed: Optional[int] = None,
         device: Union[th.device, str] = "auto",
         _init_setup_model: bool = True,
@@ -168,6 +169,8 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         self.num_observation_points = num_observation_points
         self.min_observation_count = min_observation_count
         self.intervals_per_dim = intervals_per_dim
+
+        self.run_id = run_id
 
         self.env.reset()
         # Quantized action points
@@ -325,13 +328,27 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     # Log top 10 values (critical values)
                     critical_values = th.tensor(critical_values, device=self.device)
                     # Get the top 10 critical values and their indices
-                    top_values, top_indices = th.topk(critical_values, 30, largest=True, sorted=True)
+                    top_values, top_indices = th.topk(critical_values, 2, largest=True, sorted=True)
                     top_observations = obs_tensor[top_indices]
-                    # Log the top 10 critical values and their observations
+
+                    obs_value_dict = {}
+
+                    # Log the top k critical values and their observations
                     for obs, value in zip(top_observations, top_values):
                         # Ensure obs is in a loggable format
                         serialized_obs = str(obs.cpu().numpy()) if not isinstance(obs, str) else obs.cpu().numpy()
-                        self.logger.record(f"train/critical_points/{serialized_obs}", value)
+                        obs_str = str(obs.tolist())  # Converts list to a string representation
+                        self.logger.record(f"train/critical_points/{serialized_obs}", value.item())
+                        obs_value_dict[obs_str] = value.item()
+                    
+                    # Save the dict of critical values for future use
+                    obs_value_json = json.dumps(obs_value_dict, indent=4)
+                    # Empty the file
+                    with open(f"{self.run_id}-critical-values.txt", 'w') as file:
+                        pass
+                    # Write the JSON string to the file
+                    with open(f"{self.run_id}-critical-values.txt", 'w') as file:
+                        file.write(obs_value_json)
 
                     # Log values for all observations above the frequency threshold
                     # if self.num_timesteps % 1 == 0:
