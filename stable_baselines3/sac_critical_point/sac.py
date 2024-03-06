@@ -298,8 +298,9 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             actor_loss.backward()
             self.actor.optimizer.step()
 
-            #TODO: maybe dont do this after every gradient step (every 500?)
-            if self.num_timesteps % 2000 == 0:
+            #TODO: maybe dont do this after every gradient step (every 2000?)
+            # Do the computation at the end of training to save computation
+            if self.num_timesteps == self.total_timesteps * self.epochs - 1:
                 # Extract the observations from the callback dictionary
                 pruned_observation_counts = {key: value for key, value in self.callback.observation_counts.items() if value >= self.min_observation_count}
 
@@ -321,31 +322,28 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                             critical_value = (th.max(q_values, dim=0)[0] - th.min(q_values, dim=0)[0]).unsqueeze(0)
                             critical_values.append(critical_value)
 
-                    # Log top 10 critical values at the end of each epoch
-                    if self.num_timesteps == self.total_timesteps:
-                        critical_values = th.tensor(critical_values, device=self.device)
-                        # Get the top 10 critical values and their indices
-                        top_values, top_indices = th.topk(critical_values, 5, largest=True, sorted=True)
-                        top_observations = obs_tensor[top_indices]
-                        top_values = top_values
+                    # Log top 10 values (critical values)
+                    critical_values = th.tensor(critical_values, device=self.device)
+                    # Get the top 10 critical values and their indices
+                    top_values, top_indices = th.topk(critical_values, 30, largest=True, sorted=True)
+                    top_observations = obs_tensor[top_indices]
+                    # Log the top 10 critical values and their observations
+                    for obs, value in zip(top_observations, top_values):
+                        # Ensure obs is in a loggable format
+                        serialized_obs = str(obs.cpu().numpy()) if not isinstance(obs, str) else obs.cpu().numpy()
+                        self.logger.record(f"train/critical_points/{serialized_obs}", value)
 
-                        # Log the top 10 critical values and their observations
-                        for obs, value in zip(top_observations, top_values):
-                            # Ensure obs is in a loggable format
-                            serialized_obs = str(obs.cpu().numpy()) if not isinstance(obs, str) else obs.cpu().numpy()
-                            # TODO: add logger here with .record()
+                    # Log values for all observations above the frequency threshold
+                    # if self.num_timesteps % 1 == 0:
+                    #     for idx, critical_value in enumerate(critical_values):
+                    #         serialized_obs = str(obs_tensor[idx].cpu().numpy()) if not isinstance(obs_tensor[idx].cpu().numpy(), str) else obs_tensor[idx].cpu().numpy()
+                    #         self.logger.record(f"train/critical_points/{serialized_obs}", critical_value)
 
-                    # Log critical values
-                    if self.num_timesteps % 1 == 0:
-                        for idx, critical_value in enumerate(critical_values):
-                            serialized_obs = str(obs_tensor[idx].cpu().numpy()) if not isinstance(obs_tensor[idx].cpu().numpy(), str) else obs_tensor[idx].cpu().numpy()
-                            self.logger.record(f"train/critical_points/{serialized_obs}", critical_value)
-
-                # Update target networks
-                if gradient_step % self.target_update_interval == 0:
-                    polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
-                    # Copy running stats, see GH issue #996
-                    polyak_update(self.batch_norm_stats, self.batch_norm_stats_target, 1.0)
+            # Update target networks
+            if gradient_step % self.target_update_interval == 0:
+                polyak_update(self.critic.parameters(), self.critic_target.parameters(), self.tau)
+                # Copy running stats, see GH issue #996
+                polyak_update(self.batch_norm_stats, self.batch_norm_stats_target, 1.0)
 
 
         self._n_updates += gradient_steps
@@ -360,6 +358,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
     def learn(
         self: SelfSAC_Critical_Point,
         total_timesteps: int,
+        epochs: int = None,
         callback: MaybeCallback = None,
         log_interval: int = 4,
         tb_log_name: str = "SAC",
@@ -368,6 +367,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
     ) -> SelfSAC_Critical_Point:
         self.callback = callback
         self.total_timesteps = total_timesteps
+        self.epochs = epochs
         return super().learn(
             total_timesteps=total_timesteps,
             callback=callback,
