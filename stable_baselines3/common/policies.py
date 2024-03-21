@@ -1033,7 +1033,7 @@ class ActorManyCriticPolicy(BasePolicy):
         n_costs: int,
         net_arch: Optional[Union[List[int], Dict[str, List[int]]]] = None,
         activation_fn: Type[nn.Module] = nn.Tanh,
-        ortho_init: bool = False,  # DEFAULT is True
+        ortho_init: bool = True,  # DEFAULT is True, but needs to be False for seed testing
         use_sde: bool = False,
         log_std_init: float = 0.0,
         full_std: bool = True,
