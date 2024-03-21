@@ -806,11 +806,15 @@ class DictRolloutBuffer(RolloutBuffer):
             self.observations[key] = np.zeros((self.buffer_size, self.n_envs, *obs_input_shape), dtype=np.float32)
         self.actions = np.zeros((self.buffer_size, self.n_envs, self.action_dim), dtype=np.float32)
         self.rewards = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        self.costs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.returns = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        self.returns_costs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.episode_starts = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.values = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        self.values_costs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.log_probs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.advantages = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
+        self.advantages_costs = np.zeros((self.buffer_size, self.n_envs), dtype=np.float32)
         self.generator_ready = False
         super(RolloutBuffer, self).reset()
 
@@ -822,6 +826,8 @@ class DictRolloutBuffer(RolloutBuffer):
         episode_start: np.ndarray,
         value: th.Tensor,
         log_prob: th.Tensor,
+        cost: np.ndarray=None,
+        value_cost: th.Tensor=None,
     ) -> None:
         """
         :param obs: Observation
@@ -853,6 +859,10 @@ class DictRolloutBuffer(RolloutBuffer):
         self.episode_starts[self.pos] = np.array(episode_start)
         self.values[self.pos] = value.clone().cpu().numpy().flatten()
         self.log_probs[self.pos] = log_prob.clone().cpu().numpy()
+        if cost is not None and len(cost) > 0:
+            self.costs[self.pos] = np.array(cost)
+        if value_cost is not None and value_cost.numel() > 0:
+            self.values_costs[self.pos] = value_cost.clone().cpu().numpy().flatten()
         self.pos += 1
         if self.pos == self.buffer_size:
             self.full = True
@@ -868,7 +878,17 @@ class DictRolloutBuffer(RolloutBuffer):
             for key, obs in self.observations.items():
                 self.observations[key] = self.swap_and_flatten(obs)
 
-            _tensor_names = ["actions", "values", "log_probs", "advantages", "returns"]
+            _tensor_names = [
+                "actions", 
+                "costs", 
+                "values", 
+                "values_costs",
+                "log_probs", 
+                "advantages", 
+                "advantages_costs", 
+                "returns",
+                "returns_costs",
+                ]
 
             for tensor in _tensor_names:
                 self.__dict__[tensor] = self.swap_and_flatten(self.__dict__[tensor])
@@ -891,8 +911,12 @@ class DictRolloutBuffer(RolloutBuffer):
         return DictRolloutBufferSamples(
             observations={key: self.to_torch(obs[batch_inds]) for (key, obs) in self.observations.items()},
             actions=self.to_torch(self.actions[batch_inds]),
+            costs=self.to_torch(self.costs[batch_inds]),
             old_values=self.to_torch(self.values[batch_inds].flatten()),
+            old_values_costs=self.to_torch(self.values_costs[batch_inds].flatten()),
             old_log_prob=self.to_torch(self.log_probs[batch_inds].flatten()),
             advantages=self.to_torch(self.advantages[batch_inds].flatten()),
+            advantages_costs=self.to_torch(self.advantages_costs[batch_inds].flatten()),
             returns=self.to_torch(self.returns[batch_inds].flatten()),
+            returns_costs=self.to_torch(self.returns_costs[batch_inds].flatten()),
         )
