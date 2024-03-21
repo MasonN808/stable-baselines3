@@ -548,7 +548,6 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             values = values.flatten()
             values_rewards = values[0:self.n_envs]
             values_costs = values[self.n_envs:]
-
             rollout_buffer.add(
                 self._last_obs,  # type: ignore[arg-type]
                 actions,
@@ -603,7 +602,7 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
         total_timesteps: int,
         callback: MaybeCallback = None,
         log_interval: int = 1,
-        tb_log_name: str = "OnPolicyAlgorithm",
+        tb_log_name: str = "GeneralizedOnPolicyAlgorithm",
         reset_num_timesteps: bool = True,
         progress_bar: bool = False,
     ) -> SelfOnPolicyAlgorithm:
