@@ -43,6 +43,67 @@ class FlattenExtractor(BaseFeaturesExtractor):
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         return self.flatten(observations)
+    
+class LiDARCNN(BaseFeaturesExtractor):
+    """
+    Custom CNN for Lidar observations
+
+    :param observation_space:
+    :param features_dim: Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    :param normalized_image: Whether to assume that the image is already normalized
+        or not (this disables dtype and bounds checks): when True, it only checks that
+        the space is a Box and has 3 dimensions.
+        Otherwise, it checks that it has expected dtype (uint8) and bounds (values in [0, 255]).
+    """
+
+    def __init__(
+        self,
+        observation_space: gym.Space,
+        features_dim: int = 140,
+    ) -> None:
+        assert isinstance(observation_space, spaces.Dict), (
+            "LiDAR must be used with a gym.spaces.Dict ",
+            f"observation space, not {observation_space}",
+        )
+        super().__init__(observation_space, features_dim)
+        n_input_channels = observation_space['lidar'].shape[0]
+        self.cnn = nn.Sequential(
+            nn.Conv1d(n_input_channels, 32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        with th.no_grad(): 
+            n_flatten = self.cnn(th.as_tensor(observation_space.sample()['lidar']).float()).shape[1]
+        
+        # This should be size of predefined MLP first layer architecture + number of combined features from kinematics
+        self.linear = nn.Sequential(nn.Linear(features_dim + 12, features_dim + 12), nn.ReLU())
+
+        self.flatten = nn.Flatten()
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        observed_kinematics_obs = observations['observation']
+        goal_kinematics_obs = observations['observation']
+        # lidar_obs = observations['lidar'].permute(0, 2, 1) # Use permute [batch_size, channels, sequence_length] for Conv1d, since 'lidar' data is in the shape [batch_size, sequence_length, channels]
+        lidar_obs = observations['lidar']
+        # Process lidar observations through CNN and flatten the output
+        cnn_out = self.cnn(lidar_obs)
+        
+        # Ensure kinematics observations are properly shaped (flattened if necessary)
+        observed_kinematics_obs = observed_kinematics_obs.view(observed_kinematics_obs.size(0), -1)
+        goal_kinematics_obs = goal_kinematics_obs.view(goal_kinematics_obs.size(0), -1)
+        
+        # Concatenate the CNN output with kinematics observations
+        combined_features = th.cat((cnn_out, observed_kinematics_obs, goal_kinematics_obs), dim=1)
+        # Pass the combined tensor through the linear layer(s)
+        return combined_features
+        # return self.linear(combined_features)
 
 
 class NatureCNN(BaseFeaturesExtractor):
@@ -222,6 +283,8 @@ class MlpExtractor(nn.Module):
         return self.forward_actor(features), self.forward_critic(features)
 
     def forward_actor(self, features: th.Tensor) -> th.Tensor:
+        # print(self.policy_net)
+        # print(features)
         return self.policy_net(features)
 
     def forward_critic(self, features: th.Tensor) -> th.Tensor:
