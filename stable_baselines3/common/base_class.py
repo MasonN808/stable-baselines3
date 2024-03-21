@@ -188,8 +188,9 @@ class BaseAlgorithm(ABC):
                 )
 
             # Catch common mistake: using MlpPolicy/CnnPolicy instead of MultiInputPolicy
-            if policy in ["MlpPolicy", "CnnPolicy"] and isinstance(self.observation_space, spaces.Dict):
-                raise ValueError(f"You must use `MultiInputPolicy` when working with dict observation space, not {policy}")
+            # Remove for now for custom LiDARCNN Extractor
+            # if policy in ["MlpPolicy", "CnnPolicy"] and isinstance(self.observation_space, spaces.Dict):
+            #     raise ValueError(f"You must use `MultiInputPolicy` when working with dict observation space, not {policy}")
 
             if self.use_sde and not isinstance(self.action_space, spaces.Box):
                 raise ValueError("generalized State-Dependent Exploration (gSDE) can only be used with continuous actions.")
