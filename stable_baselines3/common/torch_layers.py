@@ -69,23 +69,23 @@ class LiDARCNN(BaseFeaturesExtractor):
         super().__init__(observation_space, features_dim)
         n_input_channels = observation_space['lidar'].shape[0]
         self.cnn = nn.Sequential(
-            nn.Conv1d(n_input_channels, 32, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(n_input_channels, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Conv1d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(64, 32, kernel_size=2, stride=1, padding=1),
             nn.ReLU(),
-            nn.Conv1d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(32, 32, kernel_size=2, stride=1, padding=1),
             nn.ReLU(),
             nn.Flatten(),
         )
 
         # Compute shape by doing one forward pass
-        with th.no_grad(): 
-            n_flatten = self.cnn(th.as_tensor(observation_space.sample()['lidar']).float()).shape[1]
+        # with th.no_grad(): 
+        #     n_flatten = self.cnn(th.as_tensor(observation_space.sample()['lidar']).float()).shape[1]
         
         # This should be size of predefined MLP first layer architecture + number of combined features from kinematics
-        self.linear = nn.Sequential(nn.Linear(features_dim + 12, features_dim + 12), nn.ReLU())
+        # self.linear = nn.Sequential(nn.Linear(features_dim + 12, features_dim + 12), nn.ReLU())
 
-        self.flatten = nn.Flatten()
+        # self.flatten = nn.Flatten()
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         observed_kinematics_obs = observations['observation']
