@@ -173,6 +173,8 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         self.run_id = run_id
 
         self.env.reset()
+
+        assert isinstance(self.env.action_space, gym.spaces.Box), f"Environment action space must be Box object for SAC, but instead is {self.env.action_space}"
         # Quantized action points
         self.quantized_actions = th.tensor(self.generate_discrete_actions(env, self.intervals_per_dim), dtype=th.float32, device=self.device)
   
