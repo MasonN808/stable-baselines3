@@ -97,6 +97,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         env: Union[GymEnv, str],
         learning_rate: Union[float, Schedule] = 3e-4,
         num_observation_points: int = 10,
+        num_critical_states: int = 100,
         buffer_size: int = 1_000_000,  # 1e6
         learning_starts: int = 100,
         batch_size: int = 256,
@@ -169,6 +170,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
         self.num_observation_points = num_observation_points
         self.min_observation_count = min_observation_count
         self.intervals_per_dim = intervals_per_dim
+        self.num_critical_states = num_critical_states
 
         self.run_id = run_id
 
@@ -330,7 +332,7 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     # Log top 10 values (critical values)
                     critical_values = th.tensor(critical_values, device=self.device)
                     # Get the top 10 critical values and their indices
-                    top_values, top_indices = th.topk(critical_values, 100, largest=True, sorted=True)
+                    top_values, top_indices = th.topk(critical_values, self.num_critical_states, largest=True, sorted=True)
                     top_observations = obs_tensor[top_indices]
 
                     obs_value_dict = {}
