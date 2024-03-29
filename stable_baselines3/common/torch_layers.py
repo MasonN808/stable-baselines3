@@ -80,7 +80,7 @@ class LiDARCNN(BaseFeaturesExtractor):
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         observed_kinematics_obs = observations['observation']
-        goal_kinematics_obs = observations['observation']
+        goal_kinematics_obs = observations['desired_goal']
         lidar_obs = observations['lidar']
         # Process lidar observations through CNN and flatten the output
         cnn_out = self.cnn(lidar_obs)
@@ -121,10 +121,6 @@ class NatureCNN(BaseFeaturesExtractor):
             f"observation space, not {observation_space}",
         )
         super().__init__(observation_space, features_dim)
-        assert isinstance(observation_space, spaces.Dict), (
-            "Image must be used with a gym.spaces.Dict ",
-            f"observation space, not {observation_space}",
-        )
         # We assume CxHxW images (channels first)
         # Re-ordering will be done by pre-preprocessing or wrapper
         assert is_image_space(observation_space['image'], check_channels=False, normalized_image=normalized_image), (
@@ -180,14 +176,14 @@ class ConcatenatedNatureCNN(BaseFeaturesExtractor):
         features_dim: int = 512,
         normalized_image: bool = False,
     ) -> None:
-        assert isinstance(observation_space, spaces.Box), (
-            "NatureCNN must be used with a gym.spaces.Box ",
+        assert isinstance(observation_space, spaces.Dict), (
+            "Image must be used with a gym.spaces.Dict ",
             f"observation space, not {observation_space}",
         )
         super().__init__(observation_space, features_dim)
         # We assume CxHxW images (channels first)
         # Re-ordering will be done by pre-preprocessing or wrapper
-        assert is_image_space(observation_space, check_channels=False, normalized_image=normalized_image), (
+        assert is_image_space(observation_space["image"], check_channels=False, normalized_image=normalized_image), (
             "You should use NatureCNN "
             f"only with images not with {observation_space}\n"
             "(you are probably using `CnnPolicy` instead of `MlpPolicy` or `MultiInputPolicy`)\n"
@@ -198,7 +194,7 @@ class ConcatenatedNatureCNN(BaseFeaturesExtractor):
             "you should pass `normalize_images=False`: \n"
             "https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html"
         )
-        n_input_channels = observation_space.shape[0]
+        n_input_channels = observation_space["image"].shape[0]
         self.cnn = nn.Sequential(
             nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
             nn.ReLU(),
@@ -211,12 +207,27 @@ class ConcatenatedNatureCNN(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with th.no_grad():
-            n_flatten = self.cnn(th.as_tensor(observation_space.sample()[None]).float()).shape[1]
-
+            # print(self.cnn(th.as_tensor(observation_space.sample()["image"]).float()).shape)
+            # print(observation_space['observation'].shape)
+            n_flatten = self.cnn(th.as_tensor(observation_space.sample()["image"]).float()).shape[1] + 2*observation_space['observation'].shape[0]
+            # print(n_flatten)
+            # exit()
+            
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
-        return self.linear(self.cnn(observations))
+        observed_kinematics_obs = observations['observation']
+        goal_kinematics_obs = observations['desired_goal']
+        image_obs = observations['image']
+        cnn_out = self.cnn(image_obs)
+
+        # Ensure kinematics observations are properly shaped (flattened if necessary)
+        observed_kinematics_obs = observed_kinematics_obs.view(observed_kinematics_obs.size(0), -1)
+        goal_kinematics_obs = goal_kinematics_obs.view(goal_kinematics_obs.size(0), -1)
+        # Concatenate the CNN output with kinematics observations
+        # TODO: FIX
+        combined_features = th.cat((cnn_out, observed_kinematics_obs, goal_kinematics_obs), dim=1)
+        return self.linear(combined_features)
 
 
 def create_mlp(
