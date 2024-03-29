@@ -40,10 +40,14 @@ class RolloutBufferSamples(NamedTuple):
 class DictRolloutBufferSamples(NamedTuple):
     observations: TensorDict
     actions: th.Tensor
+    costs: th.Tensor
     old_values: th.Tensor
+    old_costs: th.Tensor
     old_log_prob: th.Tensor
     advantages: th.Tensor
+    advantages_costs: th.Tensor
     returns: th.Tensor
+    returns_costs: th.Tensor
 
 
 class ReplayBufferSamples(NamedTuple):
