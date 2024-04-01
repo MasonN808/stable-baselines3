@@ -241,9 +241,9 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
             #     file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
 
             approx_kl_divs = []
-            integral = th.zeros(1, self.batch_size, requires_grad=False).to_device(self.device)
-            j_c_prev = th.zeros(1, self.batch_size, requires_grad=False).to_device(self.device)
-            lambdas = th.zeros(1, self.batch_size, requires_grad=False).to_device(self.device)
+            integral = th.zeros(1, self.batch_size, requires_grad=False).to(self.device)
+            j_c_prev = th.zeros(1, self.batch_size, requires_grad=False).to(self.device)
+            lambdas = th.zeros(1, self.batch_size, requires_grad=False).to(self.device)
 
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
@@ -270,7 +270,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 # Apply feedback control
                 if self.lagrange_multiplier and self.n_costs > 0:
                     with th.no_grad():
-                        d = th.full(cost_values.size(), self.cost_threshold[0], requires_grad=False).to_device(self.device) # TODO: make more general later if more costs present
+                        d = th.full(cost_values.size(), self.cost_threshold[0], requires_grad=False).to(self.device) # TODO: make more general later if more costs present
                         # Cost Threshold
                         lambdas, integral = self.pid_controller(d=d, K_P=self.K_P, K_I=self.K_I, K_D=self.K_D, j_c=cost_values, j_c_prev=j_c_prev, integral=integral)
                         j_c_prev = cost_values
