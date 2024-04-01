@@ -207,11 +207,22 @@ class ConcatenatedNatureCNN(BaseFeaturesExtractor):
 
         # Compute shape by doing one forward pass
         with th.no_grad():
+            observed_kinematics_obs = th.as_tensor(observation_space.sample()['observation']).float()
+            goal_kinematics_obs = th.as_tensor(observation_space.sample()['desired_goal']).float()
+            # Ensure kinematics observations are properly shaped (flattened if necessary)
+            # observed_kinematics_obs = observed_kinematics_obs.view(observed_kinematics_obs.size(0), -1)
+            # goal_kinematics_obs = goal_kinematics_obs.view(goal_kinematics_obs.size(0), -1)
             # print(self.cnn(th.as_tensor(observation_space.sample()["image"]).float()).shape)
             # print(observation_space['observation'].shape)
-            n_flatten = self.cnn(th.as_tensor(observation_space.sample()["image"]).float()).shape[1] + 2*observation_space['observation'].shape[0]
+            cnn_out = self.cnn(th.as_tensor(observation_space.sample()["image"]).float()).flatten()
+            # print(cnn_out.shape)
+            # combined_features = th.cat((cnn_out, observed_kinematics_obs, goal_kinematics_obs), dim=1)
+            # print(combined_features.shape)
+            # print(observed_kinematics_obs.shape)
+            n_flatten = cnn_out.shape[0] + observed_kinematics_obs.shape[0] + goal_kinematics_obs.shape[0]
             # print(n_flatten)
             # exit()
+            # n_flatten = self.cnn(th.as_tensor(observation_space.sample()["image"]).float()).shape[1] + 2*observation_space['observation'].shape[0]
             
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 
@@ -220,7 +231,7 @@ class ConcatenatedNatureCNN(BaseFeaturesExtractor):
         goal_kinematics_obs = observations['desired_goal']
         image_obs = observations['image']
         cnn_out = self.cnn(image_obs)
-
+        # print(cnn_out.shape)
         # Ensure kinematics observations are properly shaped (flattened if necessary)
         observed_kinematics_obs = observed_kinematics_obs.view(observed_kinematics_obs.size(0), -1)
         goal_kinematics_obs = goal_kinematics_obs.view(goal_kinematics_obs.size(0), -1)
