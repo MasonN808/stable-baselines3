@@ -336,30 +336,10 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     # PPO surrogate loss
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
-                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * cost_values))
-
-                    # print(f"value_loss: {value_loss}")
-                    # print(f"cost_value_loss: {cost_value_loss}")
-                    # print(f"loss: {loss}")
-                    
-                    # print(f"th.sum(lambdas): {th.sum(lambdas)}")
-                    # print(f"lambdas: {lambdas}")
-                    # print(f"cost_values: {cost_values}")
+                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (cost_values-d)))
 
                 else:
-                    # Write the state to a text file
-                    # with open(self.rng_logger_path, 'a') as file:
-                    #     # file name
-                    #     file.write(f"File: {__file__}\n")
-                    #     # current line number
-                    #     file.write(f"Line: {inspect.currentframe().f_lineno}\n")
-                    #     file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
-                    # print(f"policy_loss: {policy_loss}")
-                    # print(f"entropy_loss: {entropy_loss}")
-                    # print(f"value_loss: {value_loss}")
-                    # print(f"loss: {loss}")
-                    # exit()
 
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
