@@ -336,10 +336,14 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     # PPO surrogate loss
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
-                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss - th.sum(lambdas * (cost_values-d)))
+                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (cost_values-d)))
+                    print(f"LOSS: {loss}")
+                    print(f"PPO-LOSS: {ppo_loss}")
+                    print(th.sum(lambdas * (cost_values-d)))
 
                 else:
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
+                    print(f"LOSS: {loss}")
 
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
