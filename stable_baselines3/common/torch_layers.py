@@ -173,7 +173,7 @@ class ConcatenatedNatureCNN(BaseFeaturesExtractor):
     def __init__(
         self,
         observation_space: gym.Space,
-        features_dim: int = 512,
+        features_dim: int = 1028,
         normalized_image: bool = False,
     ) -> None:
         assert isinstance(observation_space, spaces.Dict), (
@@ -196,11 +196,11 @@ class ConcatenatedNatureCNN(BaseFeaturesExtractor):
         )
         n_input_channels = observation_space["image"].shape[0]
         self.cnn = nn.Sequential(
-            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=1),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
             nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.Flatten(),
         )
@@ -236,7 +236,6 @@ class ConcatenatedNatureCNN(BaseFeaturesExtractor):
         observed_kinematics_obs = observed_kinematics_obs.view(observed_kinematics_obs.size(0), -1)
         goal_kinematics_obs = goal_kinematics_obs.view(goal_kinematics_obs.size(0), -1)
         # Concatenate the CNN output with kinematics observations
-        # TODO: FIX
         combined_features = th.cat((cnn_out, observed_kinematics_obs, goal_kinematics_obs), dim=1)
         return self.linear(combined_features)
 
