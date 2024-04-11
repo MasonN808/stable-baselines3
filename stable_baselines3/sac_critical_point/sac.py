@@ -233,7 +233,6 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
 
         ent_coef_losses, ent_coefs = [], []
         actor_losses, critic_losses = [], []
-
         for gradient_step in range(gradient_steps):
             # Sample replay buffer
             replay_data = self.replay_buffer.sample(batch_size, env=self._vec_normalize_env)  # type: ignore[union-attr]
@@ -305,9 +304,19 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             actor_loss.backward()
             self.actor.optimizer.step()
 
+            # Logging KL Divergence
+            # For each epoch
+            # TODO: Finish logging KL divergence for all batches
+            # if (self.num_timesteps % self.total_timesteps) == 0:
+            #     with th.no_grad():
+            #         log_ratio = log_prob - x.old_log_prob
+            #         approx_kl_div = th.mean((th.exp(log_ratio) - 1) - log_ratio).cpu().numpy()
+                
             #TODO: maybe dont do this after every gradient step (every 2000?)
-            # Do the computation at the end of training to save computation
-            if self.num_timesteps == self.total_timesteps * self.epochs - 1:
+            #TODO:  Use some sort of "smart" identifier to decide when to do this expensive computation (metareasoning?)
+            # Do the computation at the end of training to save computation for now
+            # if self.num_timesteps == self.total_timesteps * (self.epochs - 1): # This is for last epoch
+            if self.total_timesteps % self.num_timesteps == 0: # Every epoch
                 # Extract the observations from the callback dictionary
                 pruned_observation_counts = {key: value for key, value in self.callback.observation_counts.items() if value >= self.min_observation_count}
 
@@ -329,10 +338,11 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                             critical_value = (th.max(q_values, dim=0)[0] - th.min(q_values, dim=0)[0]).unsqueeze(0)
                             critical_values.append(critical_value)
 
-                    # Log top 10 values (critical values)
+                    # Get the top k critical values and their indices
                     critical_values = th.tensor(critical_values, device=self.device)
-                    # Get the top 10 critical values and their indices
-                    top_values, top_indices = th.topk(critical_values, self.num_critical_states, largest=True, sorted=True)
+                    topkelements = critical_values.numel() # NOTE: just for heatmap.
+                    # topkelements = self.num_critical_states
+                    top_values, top_indices = th.topk(critical_values, topkelements, largest=True, sorted=True)
                     top_observations = obs_tensor[top_indices]
 
                     obs_value_dict = {}
@@ -347,11 +357,12 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     
                     # Save the dict of critical values for future use
                     obs_value_json = json.dumps(obs_value_dict, indent=4)
+                    current_epoch = self.epochs - (self.total_timesteps / self.num_timesteps)
                     # Empty the file
-                    with open(f"{self.run_id}-critical-values.txt", 'w') as file:
+                    with open(f"{self.run_id}-critical-values-{current_epoch}.txt", 'w') as file:
                         pass
                     # Write the JSON string to the file
-                    with open(f"{self.run_id}-critical-values.txt", 'w') as file:
+                    with open(f"{self.run_id}-critical-values-{current_epoch}.txt", 'w') as file:
                         file.write(obs_value_json)
 
                     # Log values for all observations above the frequency threshold
