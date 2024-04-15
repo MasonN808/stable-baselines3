@@ -316,7 +316,8 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
             #TODO:  Use some sort of "smart" identifier to decide when to do this expensive computation (metareasoning?)
             # Do the computation at the end of training to save computation for now
             # if self.num_timesteps == self.total_timesteps * (self.epochs - 1): # This is for last epoch
-            if self.total_timesteps % self.num_timesteps == 0: # Every epoch
+            # if ((self.epochs - 1) * self.total_timesteps) % self.num_timesteps == 0: # Every epoch
+            if self.num_timesteps % self.total_timesteps == 0: # Every epoch
                 # Extract the observations from the callback dictionary
                 pruned_observation_counts = {key: value for key, value in self.callback.observation_counts.items() if value >= self.min_observation_count}
 
@@ -357,7 +358,8 @@ class SAC_Critical_Point(OffPolicyAlgorithm):
                     
                     # Save the dict of critical values for future use
                     obs_value_json = json.dumps(obs_value_dict, indent=4)
-                    current_epoch = self.epochs - (self.total_timesteps / self.num_timesteps)
+                    current_epoch = self.num_timesteps / self.total_timesteps
+                    print(f"current epoch: {current_epoch}")
                     # Empty the file
                     with open(f"{self.run_id}-critical-values-{current_epoch}.txt", 'w') as file:
                         pass
