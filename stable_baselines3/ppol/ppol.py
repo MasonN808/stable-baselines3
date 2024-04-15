@@ -231,15 +231,6 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
         # train for n_epochs epochs
         for epoch in range(self.n_epochs):
-            import inspect
-            # Write the state to a text file
-            # with open(self.rng_logger_path, 'a') as file:
-            #     # file name
-            #     file.write(f"File: {__file__}\n")
-            #     # current line number
-            #     file.write(f"Line: {inspect.currentframe().f_lineno}\n")
-            #     file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
-
             approx_kl_divs = []
             integral = th.zeros(1, self.batch_size, requires_grad=False).to(self.device)
             j_c_prev = th.zeros(1, self.batch_size, requires_grad=False).to(self.device)
@@ -283,10 +274,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 # ratio between old and new policy, should be one at the first iteration
                 ratio = th.exp(log_prob - rollout_data.old_log_prob)
-                # print(f"ratio: {ratio.mean().item()}")
-                # print(f"advantages: {advantages.mean().item()}")
-                # with open("advantages_ppo.txt", "a") as file:
-                #     file.write(f"{advantages}\n")
+
                 # clipped surrogate loss
                 policy_loss_1 = advantages * ratio
                 policy_loss_2 = advantages * th.clamp(ratio, 1 - clip_range, 1 + clip_range)

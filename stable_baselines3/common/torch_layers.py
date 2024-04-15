@@ -153,6 +153,56 @@ class NatureCNN(BaseFeaturesExtractor):
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
         return self.linear(self.cnn(observations))
+    
+
+class MiniGridCNN(BaseFeaturesExtractor):
+    """
+    CNN from DQN Nature paper:
+        Mnih, Volodymyr, et al.
+        "Human-level control through deep reinforcement learning."
+        Nature 518.7540 (2015): 529-533.
+
+    :param observation_space:
+    :param features_dim: Number of features extracted.
+        This corresponds to the number of unit for the last layer.
+    :param normalized_image: Whether to assume that the image is already normalized
+        or not (this disables dtype and bounds checks): when True, it only checks that
+        the space is a Box and has 3 dimensions.
+        Otherwise, it checks that it has expected dtype (uint8) and bounds (values in [0, 255]).
+    """
+
+    def __init__(
+        self,
+        observation_space: gym.Space,
+        features_dim: int = 512,
+        normalized_image: bool = False,
+    ) -> None:
+        assert isinstance(observation_space, spaces.Box), (
+            "NatureCNN must be used with a gym.spaces.Box ",
+            f"observation space, not {observation_space}",
+        )
+        super().__init__(observation_space, features_dim)
+        # We assume CxHxW images (channels first)
+        n_input_channels = observation_space.shape[0]
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 32, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=2, stride=2, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=1, stride=1, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+
+        # Compute shape by doing one forward pass
+        with th.no_grad():
+            n_flatten = self.cnn(th.as_tensor(observation_space.sample()[None]).float()).shape[1]
+
+        self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
+
+    def forward(self, observations: th.Tensor) -> th.Tensor:
+        return self.linear(self.cnn(observations))
+
 
 class ConcatenatedNatureCNN(BaseFeaturesExtractor):
     """
@@ -209,21 +259,9 @@ class ConcatenatedNatureCNN(BaseFeaturesExtractor):
         with th.no_grad():
             observed_kinematics_obs = th.as_tensor(observation_space.sample()['observation']).float()
             goal_kinematics_obs = th.as_tensor(observation_space.sample()['desired_goal']).float()
-            # Ensure kinematics observations are properly shaped (flattened if necessary)
-            # observed_kinematics_obs = observed_kinematics_obs.view(observed_kinematics_obs.size(0), -1)
-            # goal_kinematics_obs = goal_kinematics_obs.view(goal_kinematics_obs.size(0), -1)
-            # print(self.cnn(th.as_tensor(observation_space.sample()["image"]).float()).shape)
-            # print(observation_space['observation'].shape)
             cnn_out = self.cnn(th.as_tensor(observation_space.sample()["image"]).float()).flatten()
-            # print(cnn_out.shape)
-            # combined_features = th.cat((cnn_out, observed_kinematics_obs, goal_kinematics_obs), dim=1)
-            # print(combined_features.shape)
-            # print(observed_kinematics_obs.shape)
             n_flatten = cnn_out.shape[0] + observed_kinematics_obs.shape[0] + goal_kinematics_obs.shape[0]
-            # print(n_flatten)
-            # exit()
-            # n_flatten = self.cnn(th.as_tensor(observation_space.sample()["image"]).float()).shape[1] + 2*observation_space['observation'].shape[0]
-            
+
         self.linear = nn.Sequential(nn.Linear(n_flatten, features_dim), nn.ReLU())
 
     def forward(self, observations: th.Tensor) -> th.Tensor:
@@ -394,7 +432,7 @@ class CombinedExtractor(BaseFeaturesExtractor):
         total_concat_size = 0
         for key, subspace in observation_space.spaces.items():
             if is_image_space(subspace, normalized_image=normalized_image):
-                extractors[key] = NatureCNN(subspace, features_dim=cnn_output_dim, normalized_image=normalized_image)
+                extractors[key] = MiniGridCNN(subspace, features_dim=cnn_output_dim, normalized_image=normalized_image) #TODO: make flag for different envs (minigrid and crafter)
                 total_concat_size += cnn_output_dim
             else:
                 # The observation key is a vector, flatten it if needed
