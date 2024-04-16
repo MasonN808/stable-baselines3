@@ -324,7 +324,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     # PPO surrogate loss
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
-                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (cost_values-d)))
+                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (cost_values)))
                     print(f"LOSS: {loss}")
                     print(f"PPO-LOSS: {ppo_loss}")
                     print(th.sum(lambdas * (cost_values-d)))
