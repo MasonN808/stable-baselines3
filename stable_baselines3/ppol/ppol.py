@@ -224,6 +224,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
         entropy_losses = []
         pg_losses, value_losses, cost_value_losses = [], [], []
+        values_list, returns = [], []
         cost_values_list, cost_returns = [], []
         clip_fractions = []
 
@@ -238,6 +239,7 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
+                returns.append(th.mean(rollout_data.returns).item())
                 if self.n_costs > 0:
                     cost_returns.append(th.mean(rollout_data.returns_costs).item())
 
@@ -255,8 +257,9 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                 # Separate the reward values from the cost values
                 union_values = [i.flatten() for i in th.chunk(all_values, chunks=1+self.n_costs, dim=1)]
                 values = union_values.pop(0)
+                values_list.append(th.mean(values).item())
                 if self.n_costs > 0:
-                    cost_values = union_values[0] # TODO: make more general later if more costs present
+                    cost_values = union_values.pop(0) # TODO: make more general later if more costs present
                     cost_values_list.append(th.mean(cost_values).item())
                 # Apply feedback control
                 if self.lagrange_multiplier and self.n_costs > 0:
@@ -324,10 +327,11 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
                     # PPO surrogate loss
                     ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
                     # Apply rescale to objective
-                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (cost_values)))
+                    # loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (cost_values)))
+                    loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (rollout_data.returns)))
                     print(f"LOSS: {loss}")
                     print(f"PPO-LOSS: {ppo_loss}")
-                    print(th.sum(lambdas * (cost_values-d)))
+                    print(th.sum(lambdas * (cost_values)))
 
                 else:
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
@@ -367,7 +371,9 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         self.logger.record("train/value_loss", np.mean(value_losses))
         self.logger.record("train/cost_value_loss", np.mean(cost_value_losses))
         self.logger.record("train/cost_values", np.mean(cost_values_list))
+        self.logger.record("train/values", np.mean(values_list))
         self.logger.record("train/cost_returns", np.mean(cost_returns))
+        self.logger.record("train/returns", np.mean(returns))
         self.logger.record("train/lagrangian_multiplier", lambdas.mean().item())
         self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
