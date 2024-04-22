@@ -477,14 +477,6 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                 # Sample a new noise matrix
                 self.policy.reset_noise(env.num_envs)
             
-            # print("BUFFER:")
-            # # Print the weights for each layer in the Sequential object
-            # for layer in self.policy.mlp_extractor.policy_net:
-            #     for name, param in layer.named_parameters():
-            #         print(f"{name} : {param.data}")
-            # if n_steps == 3:
-            #     exit()
-
             with th.no_grad():
                 # Convert to pytorch tensor or to TensorDict
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
@@ -507,7 +499,6 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                     clipped_actions = np.clip(actions, self.action_space.low, self.action_space.high)
 
             new_obs, rewards, dones, infos = env.step(clipped_actions)
-            # print(f"BUFFER CLIPPED ACTION: {clipped_actions}")
 
             self.num_timesteps += env.num_envs
 
@@ -572,17 +563,6 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             self._last_episode_starts = dones
 
         with th.no_grad():
-            # import inspect
-            # # Write the state to a text file
-            # with open("PPOL_New/logs/NoMultipiler/rng_logger.txt", 'a') as file:
-            #     # file name
-            #     file.write(f"File: {__file__}\n")
-            #     # current line number
-            #     file.write(f"Line: {inspect.currentframe().f_lineno}\n")
-            #     file.write(th.get_rng_state().numpy().tobytes().hex() + "\n")
-            # TODO: values produces different values with same tensor
-            # Compute value for the last timestep
-            # print(f"new_obs: {new_obs}")
             values = self.policy.predict_values(obs_as_tensor(new_obs, self.device))  # type: ignore[arg-type]
             # Parse values from critic network
             values = values.flatten()
