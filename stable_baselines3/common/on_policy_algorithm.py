@@ -540,7 +540,7 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
                         with th.no_grad():
                             terminal_cost = self.policy.predict_values(terminal_obs).flatten()[1] # TODO make this general for arbitrary number of constraints
                         # Update information dict
-                        infos[idx]["cost"] += self.gamma * terminal_cost
+                        infos[idx]["cost"][0] += self.gamma * terminal_cost.item()
 
                     # Rewards portion
                     with th.no_grad():

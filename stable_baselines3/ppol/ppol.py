@@ -325,8 +325,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 if self.n_costs > 0 and self.lagrange_multiplier:
                     # PPO surrogate loss
-                    # ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
-                    ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss)
+                    ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
+                    # ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss)
                     # Apply rescale to objective
                     # loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (cost_values)))
                     # Trying FSRL implementation
