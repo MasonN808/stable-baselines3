@@ -529,25 +529,35 @@ class GeneralizedOnPolicyAlgorithm(OnPolicyAlgorithm):
             costs = []
             for idx, done in enumerate(dones):
                 # Extract costs fron info dict
-                if infos[idx].get("cost"):
-                    cost = np.array(infos[idx].get("cost"))
-                    costs.append(cost)
                 if (
                     done
                     and infos[idx].get("terminal_observation") is not None
                     and infos[idx].get("TimeLimit.truncated", False)
                 ):
                     terminal_obs = self.policy.obs_to_tensor(infos[idx]["terminal_observation"])[0]
+                    # Costs portion
+                    if infos[idx].get("cost"):
+                        with th.no_grad():
+                            terminal_cost = self.policy.predict_values(terminal_obs).flatten()[1] # TODO make this general for arbitrary number of constraints
+                        # Update information dict
+                        infos[idx]["cost"] += self.gamma * terminal_cost
+
+                    # Rewards portion
                     with th.no_grad():
                         terminal_value = self.policy.predict_values(terminal_obs).flatten()[0]  # type: ignore[arg-type]
                     rewards[idx] += self.gamma * terminal_value
+
+                # Convert cost to array and add to list to make data structure same as rewards
+                cost = np.array(infos[idx].get("cost"))
+                costs.append(cost)
+
             if costs:
                 costs = np.concatenate(costs)
 
             # Parse values from critic network
             values = values.flatten()
             values_rewards = values[0:self.n_envs]
-            values_costs = values[self.n_envs:]
+            values_costs = values[self.n_envs:] # TODO make this general for arbitrary number of constraints
             rollout_buffer.add(
                 self._last_obs,  # type: ignore[arg-type]
                 actions,
