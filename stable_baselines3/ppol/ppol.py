@@ -325,17 +325,16 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
 
                 if self.n_costs > 0 and self.lagrange_multiplier:
                     # PPO surrogate loss
-                    ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
+                    # ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss + cost_value_loss)
+                    ppo_loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * (value_loss)
                     # Apply rescale to objective
+                    # loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (cost_values)))
+                    # Trying FSRL implementation
+                    advantages_costs = rollout_data.advantages_costs
+                    cost_values = advantages_costs * ratio
                     loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (cost_values)))
-                    # loss = (1/(1+th.sum(lambdas))) * (ppo_loss + th.sum(lambdas * (rollout_data.returns_costs)))
-                    print(f"LOSS: {loss}")
-                    print(f"PPO-LOSS: {ppo_loss}")
-                    print(th.sum(lambdas * (cost_values)))
-
                 else:
                     loss = policy_loss + self.ent_coef * entropy_loss + self.vf_coef * value_loss
-                    print(f"LOSS: {loss}")
 
                 # Calculate approximate form of reverse KL Divergence for early stopping
                 # see issue #417: https://github.com/DLR-RM/stable-baselines3/issues/417
@@ -378,6 +377,8 @@ class PPOL(GeneralizedOnPolicyAlgorithm):
         self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/loss", loss.item())
+        self.logger.record("train/ppo_loss", ppo_loss.item())
+        self.logger.record("train/lag_loss", th.sum(lambdas * (cost_values)).item())
         self.logger.record("train/entropy", entropy_loss.item())
         self.logger.record("train/explained_variance", explained_var)
         if hasattr(self.policy, "log_std"):
